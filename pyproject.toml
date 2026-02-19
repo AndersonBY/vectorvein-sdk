@@ -29,7 +29,7 @@ format-check = "ruff format --check src/"
 lint = "ruff check src/"
 test.cmd = "python"
 test.env_file = ".env"
-type-check = "pyright src/"
+type-check = "ty check src/"
 
 [tool.ruff]
 line-length = 180
@@ -67,5 +67,25 @@ dev = [
   "types-redis>=4.6.0.20241004",
   "pytest>=8.3.4",
   "ruff>=0.8.0",
-  "pyright>=1.1.390",
+  "ty>=0.0.1a7",
 ]
+
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.analysis]
+# Third-party deps without type stubs bundled; resolved at runtime via pip install.
+allowed-unresolved-imports = ["httpx", "Crypto.**", "pydantic"]
+
+[[tool.ty.overrides]]
+# Mixin classes call self._request() which is provided by the base client at composition time.
+include = [
+  "src/vectorvein/api/access_key.py",
+  "src/vectorvein/api/workflow.py",
+  "src/vectorvein/api/file_upload.py",
+  "src/vectorvein/api/task_agent.py",
+  "src/vectorvein/api/agent_workspace.py",
+]
+
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
