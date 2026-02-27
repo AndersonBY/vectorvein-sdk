@@ -87,6 +87,8 @@ vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --st
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
 ```
 
+`auth whoami` returns `uid`, `username`, `email`, `credits`, and `date_joined` (it does not expose internal numeric user IDs).
+
 ### JSON Input Rules
 
 - Options like `--input-field`, `--attachments`, `--body` accept inline JSON.

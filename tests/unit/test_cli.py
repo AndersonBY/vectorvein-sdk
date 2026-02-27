@@ -38,8 +38,14 @@ def test_cli_auth_whoami_success_prefers_flag_api_key(monkeypatch: pytest.Monkey
             return False
 
         @staticmethod
-        def validate_api_key():
-            return type("Identity", (), {"user_id": "u_1", "username": "tester"})()
+        def get_user_info():
+            return {
+                "uid": "uid_1",
+                "username": "tester",
+                "email": "tester@example.com",
+                "credits": 42,
+                "date_joined": "1710000000000",
+            }
 
     monkeypatch.setenv("VECTORVEIN_API_KEY", "env_key_should_not_win")
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
@@ -52,7 +58,13 @@ def test_cli_auth_whoami_success_prefers_flag_api_key(monkeypatch: pytest.Monkey
     assert captured_init["api_key"] == "flag_key"
     assert stdout["ok"] is True
     assert stdout["command"] == "auth whoami"
-    assert stdout["data"] == {"user_id": "u_1", "username": "tester"}
+    assert stdout["data"] == {
+        "uid": "uid_1",
+        "username": "tester",
+        "email": "tester@example.com",
+        "credits": 42,
+        "date_joined": "1710000000000",
+    }
 
 
 def test_cli_missing_api_key_returns_usage_error(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
@@ -138,7 +150,7 @@ def test_cli_maps_api_key_error_to_exit_code_3(monkeypatch: pytest.MonkeyPatch, 
             return False
 
         @staticmethod
-        def validate_api_key():
+        def get_user_info():
             raise APIKeyError("invalid api key", status_code=401)
 
     monkeypatch.setenv("VECTORVEIN_API_KEY", "env_key")
@@ -188,4 +200,37 @@ def test_cli_no_arguments_prints_help(capsys: pytest.CaptureFixture[str]):
 
     assert exit_code == 0
     assert "usage: vectorvein" in stdout
+    assert stderr == ""
+
+
+def test_cli_auth_whoami_text_output_hides_user_id(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        @staticmethod
+        def get_user_info():
+            return {
+                "uid": "uid_1",
+                "username": "tester",
+                "email": "tester@example.com",
+                "credits": 99,
+                "date_joined": "1710000000000",
+            }
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+    exit_code = cli_main(["auth", "whoami", "--api-key", "k"])
+    stdout, stderr = _read_output(capsys)
+
+    assert exit_code == 0
+    assert "uid: uid_1" in stdout
+    assert "credits: 99" in stdout
+    assert "user_id" not in stdout
     assert stderr == ""

@@ -87,6 +87,8 @@ vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --st
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
 ```
 
+`auth whoami` 返回字段为 `uid`、`username`、`email`、`credits`、`date_joined`（不会暴露内部自增 `user_id`）。
+
 ### JSON 参数规则
 
 - `--input-field`、`--attachments`、`--body` 等参数支持直接传入 JSON 字符串。

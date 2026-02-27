@@ -324,9 +324,15 @@ def _load_optional_agent_settings(raw: str | None) -> AgentSettings | None:
         raise CLIUsageError(f"--agent-settings does not match AgentSettings schema: {exc}") from exc
 
 
-def _cmd_auth_whoami(args: argparse.Namespace, client: VectorVeinClient) -> dict[str, str]:
-    identity = client.validate_api_key()
-    return {"user_id": identity.user_id, "username": identity.username}
+def _cmd_auth_whoami(args: argparse.Namespace, client: VectorVeinClient) -> dict[str, Any]:
+    info = client.get_user_info()
+    return {
+        "uid": str(info.get("uid", "")),
+        "username": str(info.get("username", "")),
+        "email": str(info.get("email", "")),
+        "credits": int(info.get("credits", 0) or 0),
+        "date_joined": str(info.get("date_joined", "")),
+    }
 
 
 def _cmd_user_info(args: argparse.Namespace, client: VectorVeinClient) -> dict[str, Any]:
@@ -627,8 +633,8 @@ def build_parser() -> argparse.ArgumentParser:
     auth_sub.required = True
     auth_whoami = auth_sub.add_parser(
         "whoami",
-        help="Validate API key and return user identity.",
-        description="Validate API key and return {user_id, username}.",
+        help="Show current account profile summary.",
+        description="Return account summary fields: uid, username, email, credits, date_joined.",
     )
     auth_whoami.set_defaults(handler=_cmd_auth_whoami, command="auth whoami")
 

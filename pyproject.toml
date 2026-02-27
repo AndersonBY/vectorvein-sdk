@@ -10,7 +10,7 @@ license = {text = "MIT"}
 name = "vectorvein-sdk"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.3.76"
+version = "0.3.77"
 
 [project.scripts]
 vectorvein = "vectorvein.cli.main:main"
