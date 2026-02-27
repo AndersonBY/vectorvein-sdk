@@ -11,10 +11,15 @@ from vectorvein.api import APIKeyError
 from vectorvein.cli.main import main as cli_main
 
 
-def _read_json_output(capsys: pytest.CaptureFixture[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+def _read_output(capsys: pytest.CaptureFixture[str]) -> tuple[str, str]:
     captured = capsys.readouterr()
-    stdout = json.loads(captured.out) if captured.out.strip() else {}
-    stderr = json.loads(captured.err) if captured.err.strip() else {}
+    return captured.out, captured.err
+
+
+def _read_json_output(capsys: pytest.CaptureFixture[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    stdout_text, stderr_text = _read_output(capsys)
+    stdout = json.loads(stdout_text) if stdout_text.strip() else {}
+    stderr = json.loads(stderr_text) if stderr_text.strip() else {}
     return stdout, stderr
 
 
@@ -39,7 +44,7 @@ def test_cli_auth_whoami_success_prefers_flag_api_key(monkeypatch: pytest.Monkey
     monkeypatch.setenv("VECTORVEIN_API_KEY", "env_key_should_not_win")
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
 
-    exit_code = cli_main(["--api-key", "flag_key", "auth", "whoami"])
+    exit_code = cli_main(["--format", "json", "--api-key", "flag_key", "auth", "whoami"])
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -54,13 +59,12 @@ def test_cli_missing_api_key_returns_usage_error(monkeypatch: pytest.MonkeyPatch
     monkeypatch.delenv("VECTORVEIN_API_KEY", raising=False)
 
     exit_code = cli_main(["auth", "whoami"])
-    stdout, stderr = _read_json_output(capsys)
+    stdout, stderr = _read_output(capsys)
 
     assert exit_code == 2
-    assert stdout == {}
-    assert stderr["ok"] is False
-    assert stderr["error"]["type"] == "usage_error"
-    assert "Missing API key" in stderr["error"]["message"]
+    assert stdout == ""
+    assert "Error [usage_error]" in stderr
+    assert "Missing API key" in stderr
 
 
 def test_cli_workflow_run_accepts_mixed_input_sources(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path):
@@ -95,6 +99,8 @@ def test_cli_workflow_run_accepts_mixed_input_sources(monkeypatch: pytest.Monkey
 
     exit_code = cli_main(
         [
+            "--format",
+            "json",
             "--api-key",
             "test_key",
             "workflow",
@@ -138,7 +144,7 @@ def test_cli_maps_api_key_error_to_exit_code_3(monkeypatch: pytest.MonkeyPatch, 
     monkeypatch.setenv("VECTORVEIN_API_KEY", "env_key")
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
 
-    exit_code = cli_main(["auth", "whoami"])
+    exit_code = cli_main(["--format", "json", "auth", "whoami"])
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 3
@@ -166,7 +172,7 @@ def test_cli_accepts_global_flags_after_subcommand(monkeypatch: pytest.MonkeyPat
 
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
 
-    exit_code = cli_main(["workflow", "list", "--compact", "--api-key", "late_key"])
+    exit_code = cli_main(["workflow", "list", "--format", "json", "--compact", "--api-key", "late_key"])
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -174,3 +180,12 @@ def test_cli_accepts_global_flags_after_subcommand(monkeypatch: pytest.MonkeyPat
     assert stdout["ok"] is True
     assert stdout["command"] == "workflow list"
     assert stdout["data"]["total"] == 0
+
+
+def test_cli_no_arguments_prints_help(capsys: pytest.CaptureFixture[str]):
+    exit_code = cli_main([])
+    stdout, stderr = _read_output(capsys)
+
+    assert exit_code == 0
+    assert "usage: vectorvein" in stdout
+    assert stderr == ""

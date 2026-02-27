@@ -48,7 +48,8 @@ uv tool install vectorvein-sdk
 ### CLI 设计目标（对 Agent 友好）
 
 - **帮助信息可自解释**：各模块与子命令都提供详细 `--help` 与示例。
-- **输出结构稳定**：成功结果输出到 `stdout`（JSON）；错误输出到 `stderr`（JSON）。
+- **默认人类可读**：终端默认输出可读文本，更符合常规 CLI 使用习惯。
+- **按需结构化输出**：需要给 Agent 稳定解析时使用 `--format json`。
 - **鉴权优先级明确**：API Key 解析顺序为 `--api-key` > `VECTORVEIN_API_KEY`。
 - **退出码固定**：
   - `0`：成功
@@ -63,6 +64,7 @@ uv tool install vectorvein-sdk
 # 鉴权 / 用户
 vectorvein --api-key YOUR_API_KEY auth whoami
 vectorvein user info
+vectorvein --format json auth whoami
 
 # 工作流
 vectorvein workflow run \

@@ -48,7 +48,8 @@ uv tool install vectorvein-sdk
 ### CLI Design (Agent-Friendly)
 
 - **Self-descriptive help**: every module and subcommand has detailed `--help` text and examples.
-- **Structured output**: success is JSON on `stdout`; errors are JSON on `stderr`.
+- **Human-readable by default**: standard text output for normal terminal usage.
+- **Machine mode on demand**: use `--format json` when an Agent needs structured output.
 - **Predictable auth**: API key resolution order is `--api-key` > `VECTORVEIN_API_KEY`.
 - **Stable exit codes**:
   - `0`: success
@@ -63,6 +64,7 @@ uv tool install vectorvein-sdk
 # Auth / user
 vectorvein --api-key YOUR_API_KEY auth whoami
 vectorvein user info
+vectorvein --format json auth whoami
 
 # Workflow
 vectorvein workflow run \

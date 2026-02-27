@@ -36,7 +36,7 @@ EXIT_REQUEST = 5
 ENV_API_KEY = "VECTORVEIN_API_KEY"
 ENV_BASE_URL = "VECTORVEIN_BASE_URL"
 GLOBAL_FLAG_OPTIONS = {"--compact", "--debug", "--version"}
-GLOBAL_VALUE_OPTIONS = {"--api-key", "--base-url"}
+GLOBAL_VALUE_OPTIONS = {"--api-key", "--base-url", "--format"}
 
 
 class CLIUsageError(ValueError):
@@ -68,6 +68,83 @@ def _print_json(payload: dict[str, Any], *, compact: bool, stream: Any | None = 
     indent = None if compact else 2
     json_text = json.dumps(payload, ensure_ascii=False, indent=indent)
     target_stream.write(f"{json_text}\n")
+
+
+def _is_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, str | int | float | bool)
+
+
+def _format_scalar(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _render_text_lines(value: Any, indent: int = 0) -> list[str]:
+    prefix = " " * indent
+    if _is_scalar(value):
+        return [f"{prefix}{_format_scalar(value)}"]
+
+    if isinstance(value, dict):
+        if not value:
+            return [f"{prefix}{{}}"]
+        lines: list[str] = []
+        for key, child in value.items():
+            key_text = str(key)
+            if _is_scalar(child):
+                lines.append(f"{prefix}{key_text}: {_format_scalar(child)}")
+            else:
+                lines.append(f"{prefix}{key_text}:")
+                lines.extend(_render_text_lines(child, indent + 2))
+        return lines
+
+    if isinstance(value, list):
+        if not value:
+            return [f"{prefix}[]"]
+        lines = []
+        for item in value:
+            if _is_scalar(item):
+                lines.append(f"{prefix}- {_format_scalar(item)}")
+            else:
+                lines.append(f"{prefix}-")
+                lines.extend(_render_text_lines(item, indent + 2))
+        return lines
+
+    return [f"{prefix}{value}"]
+
+
+def _print_text_success(data: Any, stream: Any | None = None) -> None:
+    target_stream = sys.stdout if stream is None else stream
+    normalized = _normalize(data)
+    lines = _render_text_lines(normalized)
+    target_stream.write("\n".join(lines))
+    target_stream.write("\n")
+
+
+def _print_text_error(payload: dict[str, Any], stream: Any | None = None) -> None:
+    target_stream = sys.stderr if stream is None else stream
+    error = payload.get("error", {})
+    command = payload.get("command")
+    error_type = str(error.get("type", "error"))
+    message = str(error.get("message", "Unknown error"))
+    status_code = error.get("status_code")
+    hint = error.get("hint")
+    details = error.get("details")
+
+    if command:
+        target_stream.write(f"Error [{error_type}] ({command}): {message}\n")
+    else:
+        target_stream.write(f"Error [{error_type}]: {message}\n")
+
+    if status_code is not None:
+        target_stream.write(f"Status Code: {status_code}\n")
+    if hint:
+        target_stream.write(f"Hint: {hint}\n")
+    if isinstance(details, dict) and "traceback" in details:
+        target_stream.write("\nTraceback:\n")
+        target_stream.write(f"{details['traceback']}\n")
 
 
 def _success_payload(command: str, data: Any) -> dict[str, Any]:
@@ -496,15 +573,29 @@ def _normalize_global_options(argv: Sequence[str] | None) -> list[str] | None:
     return moved + remaining
 
 
+def _is_json_output_requested(raw_args: Sequence[str]) -> bool:
+    args = list(raw_args)
+    for index, token in enumerate(args):
+        if token == "--format" and index + 1 < len(args):
+            return args[index + 1] == "json"
+        if token.startswith("--format="):
+            return token.split("=", 1)[1] == "json"
+    return False
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = CLIArgumentParser(
         prog="vectorvein",
         description=(
-            "VectorVein command line interface.\nOutputs JSON to stdout on success and JSON to stderr on failure.\nAPI key resolution order: --api-key > VECTORVEIN_API_KEY."
+            "VectorVein command line interface.\n"
+            "Default output is human-readable text.\n"
+            "Use --format json for machine-readable responses.\n"
+            "API key resolution order: --api-key > VECTORVEIN_API_KEY."
         ),
         epilog=(
             "Examples:\n"
             "  vectorvein auth whoami\n"
+            "  vectorvein --format json auth whoami\n"
             '  vectorvein workflow run --wid wf_xxx --input-field \'{"node_id":"n1","field_name":"text","value":"Hello"}\'\n'
             "  vectorvein workflow status --rid rid_xxx\n"
             '  vectorvein task-agent task create --agent-id agent_xxx --text "Summarize this article"\n'
@@ -523,6 +614,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--api-key", help=f"VectorVein API key. Overrides {ENV_API_KEY}.")
     parser.add_argument("--base-url", help=f"Open API base URL. Overrides {ENV_BASE_URL}.")
+    parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format (default: text).")
     parser.add_argument("--compact", action="store_true", help="Output compact one-line JSON.")
     parser.add_argument("--debug", action="store_true", help="Include traceback details in error output.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {_current_version()}")
@@ -765,87 +857,96 @@ def _run_with_client(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     compact_output = False
+    json_output = False
     command: str | None = None
     debug = False
 
     try:
         raw_args = list(argv) if argv is not None else sys.argv[1:]
+        json_output = _is_json_output_requested(raw_args)
+        if not raw_args:
+            parser.print_help()
+            return EXIT_OK
         args = parser.parse_args(_normalize_global_options(raw_args))
         compact_output = bool(getattr(args, "compact", False))
+        json_output = str(getattr(args, "format", "text")) == "json"
         command = str(getattr(args, "command", "")) or None
         debug = bool(getattr(args, "debug", False))
         payload = _run_with_client(args)
-        _print_json(payload, compact=compact_output)
+        if json_output:
+            _print_json(payload, compact=compact_output)
+        else:
+            _print_text_success(payload.get("data"))
         return EXIT_OK
     except CLIUsageError as exc:
         details = {"traceback": traceback.format_exc()} if debug else None
-        _print_json(
-            _error_payload(
-                command=command,
-                error_type="usage_error",
-                message=str(exc),
-                hint="Run `vectorvein --help` or `<command> --help` to inspect required arguments.",
-                details=details,
-            ),
-            compact=compact_output,
-            stream=sys.stderr,
+        payload = _error_payload(
+            command=command,
+            error_type="usage_error",
+            message=str(exc),
+            hint="Run `vectorvein --help` or `<command> --help` to inspect required arguments.",
+            details=details,
         )
+        if json_output:
+            _print_json(payload, compact=compact_output, stream=sys.stderr)
+        else:
+            _print_text_error(payload, stream=sys.stderr)
         return EXIT_USAGE
     except APIKeyError as exc:
         details = {"traceback": traceback.format_exc()} if debug else None
-        _print_json(
-            _error_payload(
-                command=command,
-                error_type="api_key_error",
-                message=str(exc),
-                hint=f"Check --api-key or {ENV_API_KEY}.",
-                status_code=exc.status_code,
-                details=details,
-            ),
-            compact=compact_output,
-            stream=sys.stderr,
+        payload = _error_payload(
+            command=command,
+            error_type="api_key_error",
+            message=str(exc),
+            hint=f"Check --api-key or {ENV_API_KEY}.",
+            status_code=exc.status_code,
+            details=details,
         )
+        if json_output:
+            _print_json(payload, compact=compact_output, stream=sys.stderr)
+        else:
+            _print_text_error(payload, stream=sys.stderr)
         return EXIT_AUTH
     except RequestError as exc:
         details = {"traceback": traceback.format_exc()} if debug else None
-        _print_json(
-            _error_payload(
-                command=command,
-                error_type="request_error",
-                message=str(exc),
-                hint="Check network connectivity and --base-url.",
-                details=details,
-            ),
-            compact=compact_output,
-            stream=sys.stderr,
+        payload = _error_payload(
+            command=command,
+            error_type="request_error",
+            message=str(exc),
+            hint="Check network connectivity and --base-url.",
+            details=details,
         )
+        if json_output:
+            _print_json(payload, compact=compact_output, stream=sys.stderr)
+        else:
+            _print_text_error(payload, stream=sys.stderr)
         return EXIT_REQUEST
     except VectorVeinAPIError as exc:
         details = {"traceback": traceback.format_exc()} if debug else None
-        _print_json(
-            _error_payload(
-                command=command,
-                error_type="api_error",
-                message=str(exc),
-                status_code=exc.status_code,
-                details=details,
-            ),
-            compact=compact_output,
-            stream=sys.stderr,
+        payload = _error_payload(
+            command=command,
+            error_type="api_error",
+            message=str(exc),
+            status_code=exc.status_code,
+            details=details,
         )
+        if json_output:
+            _print_json(payload, compact=compact_output, stream=sys.stderr)
+        else:
+            _print_text_error(payload, stream=sys.stderr)
         return EXIT_API
     except Exception as exc:  # noqa: BLE001
         details = {"traceback": traceback.format_exc()} if debug else None
-        _print_json(
-            _error_payload(
-                command=command,
-                error_type="unexpected_error",
-                message=str(exc),
-                details=details,
-            ),
-            compact=compact_output,
-            stream=sys.stderr,
+        payload = _error_payload(
+            command=command,
+            error_type="unexpected_error",
+            message=str(exc),
+            details=details,
         )
+        if json_output:
+            _print_json(payload, compact=compact_output, stream=sys.stderr)
+        else:
+            _print_text_error(payload, stream=sys.stderr)
         return EXIT_UNEXPECTED
 
 
