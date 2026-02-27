@@ -16,6 +16,14 @@ class VApp:
 
 
 @dataclass
+class APIUserIdentity:
+    """Validated user identity."""
+
+    user_id: str
+    username: str
+
+
+@dataclass
 class AccessKey:
     """Access key information"""
 

@@ -42,6 +42,39 @@ class BaseClient:
             "VECTORVEIN-API-VERSION": self.API_VERSION,
         }
 
+    @staticmethod
+    def _is_api_key_error(status_code: int, message: str) -> bool:
+        if status_code == 401:
+            return True
+        if status_code != 403:
+            return False
+
+        message_lower = message.lower()
+        return "api key" in message_lower or "身份认证信息未提供" in message
+
+    @classmethod
+    def _parse_response(cls, response: httpx.Response) -> dict[str, Any]:
+        try:
+            result = response.json()
+        except ValueError as e:
+            raise RequestError(f"Request failed: invalid JSON response (HTTP {response.status_code})") from e
+
+        if not isinstance(result, dict):
+            raise RequestError(f"Request failed: invalid response format (HTTP {response.status_code})")
+
+        status_code = result.get("status")
+        if not isinstance(status_code, int):
+            raise RequestError(f"Request failed: missing response status (HTTP {response.status_code})")
+
+        message = str(result.get("msg", "Unknown error"))
+        if status_code in {200, 201, 202}:
+            return result
+
+        if cls._is_api_key_error(status_code, message):
+            raise APIKeyError(message or "API key is invalid or expired", status_code=status_code)
+
+        raise VectorVeinAPIError(message=message, status_code=status_code)
+
 
 class BaseSyncClient(BaseClient):
     """Base synchronous client"""
@@ -100,13 +133,7 @@ class BaseSyncClient(BaseClient):
                 headers=headers,
                 **kwargs,
             )
-            result = response.json()
-
-            if result["status"] in [401, 403]:
-                raise APIKeyError("API key is invalid or expired")
-            if result["status"] != 200 and result["status"] != 202 and result["status"] != 201:
-                raise VectorVeinAPIError(message=result.get("msg", "Unknown error"), status_code=result["status"])
-            return result
+            return self._parse_response(response)
         except httpx.HTTPError as e:
             raise RequestError(f"Request failed: {str(e)}") from e
 
@@ -201,13 +228,7 @@ class BaseAsyncClient(BaseClient):
                 headers=headers,
                 **kwargs,
             )
-            result = response.json()
-
-            if result["status"] in [401, 403]:
-                raise APIKeyError("API key is invalid or expired")
-            if result["status"] != 200 and result["status"] != 202 and result["status"] != 201:
-                raise VectorVeinAPIError(message=result.get("msg", "Unknown error"), status_code=result["status"])
-            return result
+            return self._parse_response(response)
         except httpx.HTTPError as e:
             raise RequestError(f"Request failed: {str(e)}") from e
 

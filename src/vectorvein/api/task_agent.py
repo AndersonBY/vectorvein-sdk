@@ -1,7 +1,7 @@
 """Task Agent API functionality"""
 
 from dataclasses import asdict
-from typing import Any
+from typing import Any, BinaryIO
 
 from .models import (
     Agent,
@@ -401,6 +401,56 @@ class TaskAgentSyncMixin:
         response = self._request("POST", "task-agent/agent/duplicate", json=payload)
         return _create_agent_from_response(response["data"])
 
+    def list_favorite_agents(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+        tag_ids: list[str] | None = None,
+    ) -> AgentListResponse:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        if tag_ids is not None:
+            payload["tag_ids"] = tag_ids
+
+        response = self._request("POST", "task-agent/agent/favorite-list", json=payload)
+        return _create_agent_list_response(response["data"])
+
+    def toggle_agent_favorite(self, agent_id: str, is_favorited: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"agent_id": agent_id}
+        if is_favorited is not None:
+            payload["is_favorited"] = is_favorited
+        response = self._request("POST", "task-agent/agent/toggle-favorite", json=payload)
+        return response["data"]
+
+    def update_agent_system_prompt(
+        self,
+        agent_id: str,
+        system_prompt: str,
+        optimization_task_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"agent_id": agent_id, "system_prompt": system_prompt}
+        if optimization_task_id:
+            payload["optimization_task_id"] = optimization_task_id
+        response = self._request("POST", "task-agent/agent/update-system-prompt", json=payload)
+        return response["data"]
+
+    def create_optimized_agent(
+        self,
+        agent_id: str,
+        system_prompt: str,
+        name: str | None = None,
+        optimization_task_id: str | None = None,
+    ) -> Agent:
+        payload: dict[str, Any] = {"agent_id": agent_id, "system_prompt": system_prompt}
+        if name:
+            payload["name"] = name
+        if optimization_task_id:
+            payload["optimization_task_id"] = optimization_task_id
+        response = self._request("POST", "task-agent/agent/create-optimized-agent", json=payload)
+        return _create_agent_from_response(response["data"])
+
     # Agent Task Management
     def create_agent_task(
         self,
@@ -680,6 +730,57 @@ class TaskAgentSyncMixin:
         payload = {"task_id": task_id}
         self._request("POST", "task-agent/agent-task/delete", json=payload)
 
+    def list_computer_pod_settings(self) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-task/computer-pod-settings", json={})
+        return response["data"]
+
+    def batch_delete_agent_tasks(self, task_ids: list[str]) -> dict[str, Any]:
+        payload = {"task_ids": task_ids}
+        response = self._request("POST", "task-agent/agent-task/batch-delete", json=payload)
+        return response["data"]
+
+    def add_pending_message(
+        self,
+        task_id: str,
+        message: str,
+        attachments_detail: list[AttachmentDetail] | None = None,
+        action_type: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id, "message": message}
+        if attachments_detail:
+            payload["attachments_detail"] = [_to_dict(att) for att in attachments_detail]
+        if action_type:
+            payload["action_type"] = action_type
+        response = self._request("POST", "task-agent/agent-task/add-pending-message", json=payload)
+        return response["data"]
+
+    def toggle_agent_task_hidden(self, task_id: str, is_hidden: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id}
+        if is_hidden is not None:
+            payload["is_hidden"] = is_hidden
+        response = self._request("POST", "task-agent/agent-task/toggle-hidden", json=payload)
+        return response["data"]
+
+    def toggle_agent_task_favorite(self, task_id: str, is_favorited: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id}
+        if is_favorited is not None:
+            payload["is_favorited"] = is_favorited
+        response = self._request("POST", "task-agent/agent-task/toggle-favorite", json=payload)
+        return response["data"]
+
+    def start_prompt_optimization(self, task_id: str, optimization_direction: str) -> dict[str, Any]:
+        payload = {"task_id": task_id, "optimization_direction": optimization_direction}
+        response = self._request("POST", "task-agent/agent-task/start-prompt-optimization", json=payload)
+        return response["data"]
+
+    def get_prompt_optimizer_config(self) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-task/get-prompt-optimizer-config", json={})
+        return response["data"]
+
+    def close_computer_environment(self, task_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-task/close-computer-environment", json={"task_id": task_id})
+        return response["data"]
+
     # Agent Task Cycle Management
     def list_agent_cycles(
         self,
@@ -717,6 +818,430 @@ class TaskAgentSyncMixin:
         payload = {"cycle_id": cycle_id}
         response = self._request("POST", "task-agent/agent-cycle/get", json=payload)
         return AgentCycle(**response["data"])
+
+    def run_agent_cycle_workflow(
+        self,
+        cycle_id: str,
+        tool_name: str,
+        workflow_inputs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload = dict(workflow_inputs or {})
+        payload["_vectorvein_cycle_id"] = cycle_id
+        payload["_vectorvein_tool_name"] = tool_name
+        response = self._request("POST", "task-agent/agent-cycle/run-workflow", json=payload)
+        return response["data"]
+
+    def check_agent_cycle_workflow_status(self, rid: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-cycle/check-workflow-status", json={"rid": rid})
+        return response["data"]
+
+    def finish_agent_cycle_task(self, cycle_id: str, message: str = "任务已完成") -> dict[str, Any]:
+        payload = {"cycle_id": cycle_id, "message": message}
+        response = self._request("POST", "task-agent/agent-cycle/task-finish", json=payload)
+        return response["data"]
+
+    def replay_agent_cycles(self, task_id: str, start_index: int = 0, end_index: int | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id, "start_index": start_index}
+        if end_index is not None:
+            payload["end_index"] = end_index
+        response = self._request("POST", "task-agent/agent-cycle/replay-cycles", json=payload)
+        return response["data"]
+
+    def get_agent_replay_summary(self, task_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-cycle/replay-summary", json={"task_id": task_id})
+        return response["data"]
+
+    def create_agent_tag(self, title: str, color: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"title": title}
+        if color is not None:
+            payload["color"] = color
+        response = self._request("POST", "task-agent/tag/create", json=payload)
+        return response["data"]
+
+    def delete_agent_tag(self, tag_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/tag/delete", json={"tid": tag_id})
+        return response["data"]
+
+    def list_agent_tags(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/tag/list", json=payload)
+        return response["data"]
+
+    def update_agent_tags(self, data: list[dict[str, Any]]) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/tag/update", json={"data": data})
+        return response["data"]
+
+    def search_agent_tags(self, title: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/tag/search", json={"title": title})
+        return response["data"]
+
+    def create_agent_collection(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/collection/create", json=payload)
+        return response["data"]
+
+    def get_agent_collection(self, collection_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/collection/get", json={"collection_id": collection_id})
+        return response["data"]
+
+    def list_agent_collections(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        response = self._request("POST", "task-agent/collection/list", json=payload)
+        return response["data"]
+
+    def list_public_agent_collections(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        response = self._request("POST", "task-agent/collection/public-list", json=payload)
+        return response["data"]
+
+    def update_agent_collection(self, collection_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"collection_id": collection_id, **payload}
+        response = self._request("POST", "task-agent/collection/update", json=request_data)
+        return response["data"]
+
+    def delete_agent_collection(self, collection_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/collection/delete", json={"collection_id": collection_id})
+        return response["data"]
+
+    def add_agent_to_collection(self, collection_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"collection_id": collection_id, "agent_id": agent_id}
+        response = self._request("POST", "task-agent/collection/add-agent", json=payload)
+        return response["data"]
+
+    def remove_agent_from_collection(self, collection_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"collection_id": collection_id, "agent_id": agent_id}
+        response = self._request("POST", "task-agent/collection/remove-agent", json=payload)
+        return response["data"]
+
+    def list_mcp_servers(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/list", json=payload)
+        return response["data"]
+
+    def create_mcp_server(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/create", json=payload)
+        return response["data"]
+
+    def get_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/get", json={"server_id": server_id})
+        return response["data"]
+
+    def update_mcp_server(self, server_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"server_id": server_id, **payload}
+        response = self._request("POST", "task-agent/mcp-server/update", json=request_data)
+        return response["data"]
+
+    def delete_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/delete", json={"server_id": server_id})
+        return response["data"]
+
+    def test_mcp_server_connection(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/test-connection", json=payload)
+        return response["data"]
+
+    def test_existing_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-server/test-existing-server", json={"server_id": server_id})
+        return response["data"]
+
+    def list_mcp_tools(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-tool/list", json=payload)
+        return response["data"]
+
+    def create_mcp_tool(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-tool/create", json=payload)
+        return response["data"]
+
+    def get_mcp_tool(self, tool_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-tool/get", json={"tool_id": tool_id})
+        return response["data"]
+
+    def update_mcp_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"tool_id": tool_id, **payload}
+        response = self._request("POST", "task-agent/mcp-tool/update", json=request_data)
+        return response["data"]
+
+    def delete_mcp_tool(self, tool_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/mcp-tool/delete", json={"tool_id": tool_id})
+        return response["data"]
+
+    def get_mcp_tool_logs(self, tool_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"tool_id": tool_id, "page": page, "page_size": page_size}
+        response = self._request("POST", "task-agent/mcp-tool/get-logs", json=payload)
+        return response["data"]
+
+    def create_user_memory(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/user-memory/create", json=payload)
+        return response["data"]
+
+    def get_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/user-memory/get", json={"memory_id": memory_id})
+        return response["data"]
+
+    def list_user_memories(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        memory_type: str | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"page": page, "page_size": page_size}
+        if memory_type is not None:
+            payload["memory_type"] = memory_type
+        if is_active is not None:
+            payload["is_active"] = is_active
+        if search:
+            payload["search"] = search
+        response = self._request("POST", "task-agent/user-memory/list", json=payload)
+        return response["data"]
+
+    def update_user_memory(self, memory_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"memory_id": memory_id, **payload}
+        response = self._request("POST", "task-agent/user-memory/update", json=request_data)
+        return response["data"]
+
+    def delete_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/user-memory/delete", json={"memory_id": memory_id})
+        return response["data"]
+
+    def toggle_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/user-memory/toggle", json={"memory_id": memory_id})
+        return response["data"]
+
+    def get_user_memory_stats(self) -> dict[str, Any]:
+        response = self._request("GET", "task-agent/user-memory/stats")
+        return response["data"]
+
+    def batch_delete_user_memories(self, memory_ids: list[str]) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/user-memory/batch-delete", json={"memory_ids": memory_ids})
+        return response["data"]
+
+    def batch_toggle_user_memories(self, memory_ids: list[str], is_active: bool) -> dict[str, Any]:
+        payload = {"memory_ids": memory_ids, "is_active": is_active}
+        response = self._request("POST", "task-agent/user-memory/batch-toggle", json=payload)
+        return response["data"]
+
+    def list_user_memory_types(self) -> dict[str, Any]:
+        response = self._request("GET", "task-agent/user-memory/types")
+        return response["data"]
+
+    def list_skills(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill/list", json=payload)
+        return response["data"]
+
+    def list_my_skills(self, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        response = self._request("POST", "task-agent/skill/my-skills", json=payload)
+        return response["data"]
+
+    def get_skill(self, skill_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill/get", json={"skill_id": skill_id})
+        return response["data"]
+
+    def create_skill(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill/create", json=payload)
+        return response["data"]
+
+    def upload_and_parse_skill(self, file: BinaryIO | str, filename: str | None = None) -> dict[str, Any]:
+        if isinstance(file, str):
+            import os
+
+            if not filename:
+                filename = os.path.basename(file)
+            with open(file, "rb") as file_obj:
+                files = {"file": (filename, file_obj, None)}
+                response = self._request("POST", "task-agent/skill/upload-and-parse", files=files)
+        else:
+            if not filename:
+                filename = getattr(file, "name", "skill.zip")
+            files = {"file": (filename, file, None)}
+            response = self._request("POST", "task-agent/skill/upload-and-parse", files=files)
+
+        return response["data"]
+
+    def update_skill(self, skill_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"skill_id": skill_id, **payload}
+        response = self._request("POST", "task-agent/skill/update", json=request_data)
+        return response["data"]
+
+    def delete_skill(self, skill_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill/delete", json={"skill_id": skill_id})
+        return response["data"]
+
+    def install_skill(
+        self,
+        skill_id: str,
+        agent_id: str | None = None,
+        permission_level: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        if permission_level is not None:
+            payload["permission_level"] = permission_level
+        response = self._request("POST", "task-agent/skill/install", json=payload)
+        return response["data"]
+
+    def uninstall_skill(self, skill_id: str, agent_id: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        response = self._request("POST", "task-agent/skill/uninstall", json=payload)
+        return response["data"]
+
+    def list_installed_skills(self, agent_id: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        response = self._request("POST", "task-agent/skill/installed", json=payload)
+        return response["data"]
+
+    def update_skill_installation(self, installation_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"installation_id": installation_id, **payload}
+        response = self._request("POST", "task-agent/skill/update-installation", json=request_data)
+        return response["data"]
+
+    def set_skill_agent_override(self, skill_id: str, agent_id: str, is_enabled: bool) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "agent_id": agent_id, "is_enabled": is_enabled}
+        response = self._request("POST", "task-agent/skill/set-agent-override", json=payload)
+        return response["data"]
+
+    def remove_skill_agent_override(self, skill_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "agent_id": agent_id}
+        response = self._request("POST", "task-agent/skill/remove-agent-override", json=payload)
+        return response["data"]
+
+    def list_skill_categories(self) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill/categories", json={})
+        return response["data"]
+
+    def list_skill_reviews(self, skill_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "page": page, "page_size": page_size}
+        response = self._request("POST", "task-agent/skill-review/list", json=payload)
+        return response["data"]
+
+    def create_skill_review(self, skill_id: str, rating: int, comment: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id, "rating": rating}
+        if comment is not None:
+            payload["comment"] = comment
+        response = self._request("POST", "task-agent/skill-review/create", json=payload)
+        return response["data"]
+
+    def delete_skill_review(self, review_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/skill-review/delete", json={"review_id": review_id})
+        return response["data"]
+
+    def list_task_categories(self) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/task-category/list", json={})
+        return response["data"]
+
+    def list_tool_categories(self) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/tool-category/list", json={})
+        return response["data"]
+
+    def list_official_workflow_tools(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/workflow-tool/official-list", json=payload)
+        return response["data"]
+
+    def list_my_workflow_tools(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/workflow-tool/my-list", json=payload)
+        return response["data"]
+
+    def create_workflow_tool(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/workflow-tool/create", json=payload)
+        return response["data"]
+
+    def update_workflow_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"tool_id": tool_id, **payload}
+        response = self._request("POST", "task-agent/workflow-tool/update", json=request_data)
+        return response["data"]
+
+    def delete_workflow_tool(self, tool_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/workflow-tool/delete", json={"tool_id": tool_id})
+        return response["data"]
+
+    def get_workflow_tool_detail(self, tool_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/workflow-tool/detail", json={"tool_id": tool_id})
+        return response["data"]
+
+    def batch_create_workflow_tools(
+        self,
+        workflow_wids: list[str] | None = None,
+        template_tids: list[str] | None = None,
+        category_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if workflow_wids is not None:
+            payload["workflow_wids"] = workflow_wids
+        if template_tids is not None:
+            payload["template_tids"] = template_tids
+        if category_id is not None:
+            payload["category_id"] = category_id
+        response = self._request("POST", "task-agent/workflow-tool/batch-create", json=payload)
+        return response["data"]
+
+    def list_task_schedules(self, **payload: Any) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/task-schedule/list", json=payload)
+        return response["data"]
+
+    def get_task_schedule(self, schedule_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/task-schedule/get", json={"sid": schedule_id})
+        return response["data"]
+
+    def update_task_schedule(
+        self,
+        cron_expression: str,
+        schedule_id: str | None = None,
+        agent_id: str | None = None,
+        timezone: str | None = None,
+        title: str | None = None,
+        task_info: dict[str, Any] | None = None,
+        mounted_cloud_storage_paths: list[str] | None = None,
+        max_cycles: int | None = None,
+        send_email: bool | None = None,
+        load_user_memory: bool | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"cron_expression": cron_expression}
+        if schedule_id is not None:
+            payload["sid"] = schedule_id
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        if timezone is not None:
+            payload["timezone"] = timezone
+        if title is not None:
+            payload["title"] = title
+        if task_info is not None:
+            payload["task_info"] = task_info
+        if mounted_cloud_storage_paths is not None:
+            payload["mounted_cloud_storage_paths"] = mounted_cloud_storage_paths
+        if max_cycles is not None:
+            payload["max_cycles"] = max_cycles
+        if send_email is not None:
+            payload["send_email"] = send_email
+        if load_user_memory is not None:
+            payload["load_user_memory"] = load_user_memory
+        response = self._request("POST", "task-agent/task-schedule/update", json=payload)
+        return response["data"]
+
+    def delete_task_schedule(self, schedule_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/task-schedule/delete", json={"sid": schedule_id})
+        return response["data"]
+
+    def toggle_task_schedule(self, schedule_id: str, enabled: bool = True) -> dict[str, Any]:
+        payload = {"sid": schedule_id, "enabled": enabled}
+        response = self._request("POST", "task-agent/task-schedule/toggle", json=payload)
+        return response["data"]
 
 
 class TaskAgentAsyncMixin:
@@ -879,6 +1404,56 @@ class TaskAgentAsyncMixin:
         response = await self._request("POST", "task-agent/agent/duplicate", json=payload)
         return _create_agent_from_response(response["data"])
 
+    async def list_favorite_agents(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+        tag_ids: list[str] | None = None,
+    ) -> AgentListResponse:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        if tag_ids is not None:
+            payload["tag_ids"] = tag_ids
+
+        response = await self._request("POST", "task-agent/agent/favorite-list", json=payload)
+        return _create_agent_list_response(response["data"])
+
+    async def toggle_agent_favorite(self, agent_id: str, is_favorited: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"agent_id": agent_id}
+        if is_favorited is not None:
+            payload["is_favorited"] = is_favorited
+        response = await self._request("POST", "task-agent/agent/toggle-favorite", json=payload)
+        return response["data"]
+
+    async def update_agent_system_prompt(
+        self,
+        agent_id: str,
+        system_prompt: str,
+        optimization_task_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"agent_id": agent_id, "system_prompt": system_prompt}
+        if optimization_task_id:
+            payload["optimization_task_id"] = optimization_task_id
+        response = await self._request("POST", "task-agent/agent/update-system-prompt", json=payload)
+        return response["data"]
+
+    async def create_optimized_agent(
+        self,
+        agent_id: str,
+        system_prompt: str,
+        name: str | None = None,
+        optimization_task_id: str | None = None,
+    ) -> Agent:
+        payload: dict[str, Any] = {"agent_id": agent_id, "system_prompt": system_prompt}
+        if name:
+            payload["name"] = name
+        if optimization_task_id:
+            payload["optimization_task_id"] = optimization_task_id
+        response = await self._request("POST", "task-agent/agent/create-optimized-agent", json=payload)
+        return _create_agent_from_response(response["data"])
+
     # Agent Task Management
     async def create_agent_task(
         self,
@@ -1029,6 +1604,57 @@ class TaskAgentAsyncMixin:
         payload = {"task_id": task_id}
         await self._request("POST", "task-agent/agent-task/delete", json=payload)
 
+    async def list_computer_pod_settings(self) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-task/computer-pod-settings", json={})
+        return response["data"]
+
+    async def batch_delete_agent_tasks(self, task_ids: list[str]) -> dict[str, Any]:
+        payload = {"task_ids": task_ids}
+        response = await self._request("POST", "task-agent/agent-task/batch-delete", json=payload)
+        return response["data"]
+
+    async def add_pending_message(
+        self,
+        task_id: str,
+        message: str,
+        attachments_detail: list[AttachmentDetail] | None = None,
+        action_type: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id, "message": message}
+        if attachments_detail:
+            payload["attachments_detail"] = [_to_dict(att) for att in attachments_detail]
+        if action_type:
+            payload["action_type"] = action_type
+        response = await self._request("POST", "task-agent/agent-task/add-pending-message", json=payload)
+        return response["data"]
+
+    async def toggle_agent_task_hidden(self, task_id: str, is_hidden: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id}
+        if is_hidden is not None:
+            payload["is_hidden"] = is_hidden
+        response = await self._request("POST", "task-agent/agent-task/toggle-hidden", json=payload)
+        return response["data"]
+
+    async def toggle_agent_task_favorite(self, task_id: str, is_favorited: bool | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id}
+        if is_favorited is not None:
+            payload["is_favorited"] = is_favorited
+        response = await self._request("POST", "task-agent/agent-task/toggle-favorite", json=payload)
+        return response["data"]
+
+    async def start_prompt_optimization(self, task_id: str, optimization_direction: str) -> dict[str, Any]:
+        payload = {"task_id": task_id, "optimization_direction": optimization_direction}
+        response = await self._request("POST", "task-agent/agent-task/start-prompt-optimization", json=payload)
+        return response["data"]
+
+    async def get_prompt_optimizer_config(self) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-task/get-prompt-optimizer-config", json={})
+        return response["data"]
+
+    async def close_computer_environment(self, task_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-task/close-computer-environment", json={"task_id": task_id})
+        return response["data"]
+
     # Agent Task Cycle Management
     async def list_agent_cycles(
         self,
@@ -1045,3 +1671,432 @@ class TaskAgentAsyncMixin:
         payload = {"cycle_id": cycle_id}
         response = await self._request("POST", "task-agent/agent-cycle/get", json=payload)
         return AgentCycle(**response["data"])
+
+    async def run_agent_cycle_workflow(
+        self,
+        cycle_id: str,
+        tool_name: str,
+        workflow_inputs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload = dict(workflow_inputs or {})
+        payload["_vectorvein_cycle_id"] = cycle_id
+        payload["_vectorvein_tool_name"] = tool_name
+        response = await self._request("POST", "task-agent/agent-cycle/run-workflow", json=payload)
+        return response["data"]
+
+    async def check_agent_cycle_workflow_status(self, rid: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-cycle/check-workflow-status", json={"rid": rid})
+        return response["data"]
+
+    async def finish_agent_cycle_task(self, cycle_id: str, message: str = "任务已完成") -> dict[str, Any]:
+        payload = {"cycle_id": cycle_id, "message": message}
+        response = await self._request("POST", "task-agent/agent-cycle/task-finish", json=payload)
+        return response["data"]
+
+    async def replay_agent_cycles(
+        self,
+        task_id: str,
+        start_index: int = 0,
+        end_index: int | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"task_id": task_id, "start_index": start_index}
+        if end_index is not None:
+            payload["end_index"] = end_index
+        response = await self._request("POST", "task-agent/agent-cycle/replay-cycles", json=payload)
+        return response["data"]
+
+    async def get_agent_replay_summary(self, task_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-cycle/replay-summary", json={"task_id": task_id})
+        return response["data"]
+
+    async def create_agent_tag(self, title: str, color: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"title": title}
+        if color is not None:
+            payload["color"] = color
+        response = await self._request("POST", "task-agent/tag/create", json=payload)
+        return response["data"]
+
+    async def delete_agent_tag(self, tag_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/tag/delete", json={"tid": tag_id})
+        return response["data"]
+
+    async def list_agent_tags(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/tag/list", json=payload)
+        return response["data"]
+
+    async def update_agent_tags(self, data: list[dict[str, Any]]) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/tag/update", json={"data": data})
+        return response["data"]
+
+    async def search_agent_tags(self, title: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/tag/search", json={"title": title})
+        return response["data"]
+
+    async def create_agent_collection(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/collection/create", json=payload)
+        return response["data"]
+
+    async def get_agent_collection(self, collection_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/collection/get", json={"collection_id": collection_id})
+        return response["data"]
+
+    async def list_agent_collections(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        response = await self._request("POST", "task-agent/collection/list", json=payload)
+        return response["data"]
+
+    async def list_public_agent_collections(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        if search:
+            payload["search"] = search
+        response = await self._request("POST", "task-agent/collection/public-list", json=payload)
+        return response["data"]
+
+    async def update_agent_collection(self, collection_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"collection_id": collection_id, **payload}
+        response = await self._request("POST", "task-agent/collection/update", json=request_data)
+        return response["data"]
+
+    async def delete_agent_collection(self, collection_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/collection/delete", json={"collection_id": collection_id})
+        return response["data"]
+
+    async def add_agent_to_collection(self, collection_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"collection_id": collection_id, "agent_id": agent_id}
+        response = await self._request("POST", "task-agent/collection/add-agent", json=payload)
+        return response["data"]
+
+    async def remove_agent_from_collection(self, collection_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"collection_id": collection_id, "agent_id": agent_id}
+        response = await self._request("POST", "task-agent/collection/remove-agent", json=payload)
+        return response["data"]
+
+    async def list_mcp_servers(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/list", json=payload)
+        return response["data"]
+
+    async def create_mcp_server(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/create", json=payload)
+        return response["data"]
+
+    async def get_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/get", json={"server_id": server_id})
+        return response["data"]
+
+    async def update_mcp_server(self, server_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"server_id": server_id, **payload}
+        response = await self._request("POST", "task-agent/mcp-server/update", json=request_data)
+        return response["data"]
+
+    async def delete_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/delete", json={"server_id": server_id})
+        return response["data"]
+
+    async def test_mcp_server_connection(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/test-connection", json=payload)
+        return response["data"]
+
+    async def test_existing_mcp_server(self, server_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-server/test-existing-server", json={"server_id": server_id})
+        return response["data"]
+
+    async def list_mcp_tools(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-tool/list", json=payload)
+        return response["data"]
+
+    async def create_mcp_tool(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-tool/create", json=payload)
+        return response["data"]
+
+    async def get_mcp_tool(self, tool_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-tool/get", json={"tool_id": tool_id})
+        return response["data"]
+
+    async def update_mcp_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"tool_id": tool_id, **payload}
+        response = await self._request("POST", "task-agent/mcp-tool/update", json=request_data)
+        return response["data"]
+
+    async def delete_mcp_tool(self, tool_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/mcp-tool/delete", json={"tool_id": tool_id})
+        return response["data"]
+
+    async def get_mcp_tool_logs(self, tool_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"tool_id": tool_id, "page": page, "page_size": page_size}
+        response = await self._request("POST", "task-agent/mcp-tool/get-logs", json=payload)
+        return response["data"]
+
+    async def create_user_memory(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/user-memory/create", json=payload)
+        return response["data"]
+
+    async def get_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/user-memory/get", json={"memory_id": memory_id})
+        return response["data"]
+
+    async def list_user_memories(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        memory_type: str | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"page": page, "page_size": page_size}
+        if memory_type is not None:
+            payload["memory_type"] = memory_type
+        if is_active is not None:
+            payload["is_active"] = is_active
+        if search:
+            payload["search"] = search
+        response = await self._request("POST", "task-agent/user-memory/list", json=payload)
+        return response["data"]
+
+    async def update_user_memory(self, memory_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"memory_id": memory_id, **payload}
+        response = await self._request("POST", "task-agent/user-memory/update", json=request_data)
+        return response["data"]
+
+    async def delete_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/user-memory/delete", json={"memory_id": memory_id})
+        return response["data"]
+
+    async def toggle_user_memory(self, memory_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/user-memory/toggle", json={"memory_id": memory_id})
+        return response["data"]
+
+    async def get_user_memory_stats(self) -> dict[str, Any]:
+        response = await self._request("GET", "task-agent/user-memory/stats")
+        return response["data"]
+
+    async def batch_delete_user_memories(self, memory_ids: list[str]) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/user-memory/batch-delete", json={"memory_ids": memory_ids})
+        return response["data"]
+
+    async def batch_toggle_user_memories(self, memory_ids: list[str], is_active: bool) -> dict[str, Any]:
+        payload = {"memory_ids": memory_ids, "is_active": is_active}
+        response = await self._request("POST", "task-agent/user-memory/batch-toggle", json=payload)
+        return response["data"]
+
+    async def list_user_memory_types(self) -> dict[str, Any]:
+        response = await self._request("GET", "task-agent/user-memory/types")
+        return response["data"]
+
+    async def list_skills(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill/list", json=payload)
+        return response["data"]
+
+    async def list_my_skills(self, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"page": page, "page_size": page_size}
+        response = await self._request("POST", "task-agent/skill/my-skills", json=payload)
+        return response["data"]
+
+    async def get_skill(self, skill_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill/get", json={"skill_id": skill_id})
+        return response["data"]
+
+    async def create_skill(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill/create", json=payload)
+        return response["data"]
+
+    async def upload_and_parse_skill(self, file: BinaryIO | str, filename: str | None = None) -> dict[str, Any]:
+        if isinstance(file, str):
+            import os
+
+            if not filename:
+                filename = os.path.basename(file)
+            with open(file, "rb") as file_obj:
+                files = {"file": (filename, file_obj, None)}
+                response = await self._request("POST", "task-agent/skill/upload-and-parse", files=files)
+        else:
+            if not filename:
+                filename = getattr(file, "name", "skill.zip")
+            files = {"file": (filename, file, None)}
+            response = await self._request("POST", "task-agent/skill/upload-and-parse", files=files)
+
+        return response["data"]
+
+    async def update_skill(self, skill_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"skill_id": skill_id, **payload}
+        response = await self._request("POST", "task-agent/skill/update", json=request_data)
+        return response["data"]
+
+    async def delete_skill(self, skill_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill/delete", json={"skill_id": skill_id})
+        return response["data"]
+
+    async def install_skill(
+        self,
+        skill_id: str,
+        agent_id: str | None = None,
+        permission_level: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        if permission_level is not None:
+            payload["permission_level"] = permission_level
+        response = await self._request("POST", "task-agent/skill/install", json=payload)
+        return response["data"]
+
+    async def uninstall_skill(self, skill_id: str, agent_id: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        response = await self._request("POST", "task-agent/skill/uninstall", json=payload)
+        return response["data"]
+
+    async def list_installed_skills(self, agent_id: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        response = await self._request("POST", "task-agent/skill/installed", json=payload)
+        return response["data"]
+
+    async def update_skill_installation(self, installation_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"installation_id": installation_id, **payload}
+        response = await self._request("POST", "task-agent/skill/update-installation", json=request_data)
+        return response["data"]
+
+    async def set_skill_agent_override(self, skill_id: str, agent_id: str, is_enabled: bool) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "agent_id": agent_id, "is_enabled": is_enabled}
+        response = await self._request("POST", "task-agent/skill/set-agent-override", json=payload)
+        return response["data"]
+
+    async def remove_skill_agent_override(self, skill_id: str, agent_id: str) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "agent_id": agent_id}
+        response = await self._request("POST", "task-agent/skill/remove-agent-override", json=payload)
+        return response["data"]
+
+    async def list_skill_categories(self) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill/categories", json={})
+        return response["data"]
+
+    async def list_skill_reviews(self, skill_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        payload = {"skill_id": skill_id, "page": page, "page_size": page_size}
+        response = await self._request("POST", "task-agent/skill-review/list", json=payload)
+        return response["data"]
+
+    async def create_skill_review(self, skill_id: str, rating: int, comment: str | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"skill_id": skill_id, "rating": rating}
+        if comment is not None:
+            payload["comment"] = comment
+        response = await self._request("POST", "task-agent/skill-review/create", json=payload)
+        return response["data"]
+
+    async def delete_skill_review(self, review_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/skill-review/delete", json={"review_id": review_id})
+        return response["data"]
+
+    async def list_task_categories(self) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/task-category/list", json={})
+        return response["data"]
+
+    async def list_tool_categories(self) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/tool-category/list", json={})
+        return response["data"]
+
+    async def list_official_workflow_tools(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/workflow-tool/official-list", json=payload)
+        return response["data"]
+
+    async def list_my_workflow_tools(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/workflow-tool/my-list", json=payload)
+        return response["data"]
+
+    async def create_workflow_tool(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/workflow-tool/create", json=payload)
+        return response["data"]
+
+    async def update_workflow_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
+        request_data = {"tool_id": tool_id, **payload}
+        response = await self._request("POST", "task-agent/workflow-tool/update", json=request_data)
+        return response["data"]
+
+    async def delete_workflow_tool(self, tool_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/workflow-tool/delete", json={"tool_id": tool_id})
+        return response["data"]
+
+    async def get_workflow_tool_detail(self, tool_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/workflow-tool/detail", json={"tool_id": tool_id})
+        return response["data"]
+
+    async def batch_create_workflow_tools(
+        self,
+        workflow_wids: list[str] | None = None,
+        template_tids: list[str] | None = None,
+        category_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        if workflow_wids is not None:
+            payload["workflow_wids"] = workflow_wids
+        if template_tids is not None:
+            payload["template_tids"] = template_tids
+        if category_id is not None:
+            payload["category_id"] = category_id
+        response = await self._request("POST", "task-agent/workflow-tool/batch-create", json=payload)
+        return response["data"]
+
+    async def list_task_schedules(self, **payload: Any) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/task-schedule/list", json=payload)
+        return response["data"]
+
+    async def get_task_schedule(self, schedule_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/task-schedule/get", json={"sid": schedule_id})
+        return response["data"]
+
+    async def update_task_schedule(
+        self,
+        cron_expression: str,
+        schedule_id: str | None = None,
+        agent_id: str | None = None,
+        timezone: str | None = None,
+        title: str | None = None,
+        task_info: dict[str, Any] | None = None,
+        mounted_cloud_storage_paths: list[str] | None = None,
+        max_cycles: int | None = None,
+        send_email: bool | None = None,
+        load_user_memory: bool | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"cron_expression": cron_expression}
+        if schedule_id is not None:
+            payload["sid"] = schedule_id
+        if agent_id is not None:
+            payload["agent_id"] = agent_id
+        if timezone is not None:
+            payload["timezone"] = timezone
+        if title is not None:
+            payload["title"] = title
+        if task_info is not None:
+            payload["task_info"] = task_info
+        if mounted_cloud_storage_paths is not None:
+            payload["mounted_cloud_storage_paths"] = mounted_cloud_storage_paths
+        if max_cycles is not None:
+            payload["max_cycles"] = max_cycles
+        if send_email is not None:
+            payload["send_email"] = send_email
+        if load_user_memory is not None:
+            payload["load_user_memory"] = load_user_memory
+        response = await self._request("POST", "task-agent/task-schedule/update", json=payload)
+        return response["data"]
+
+    async def delete_task_schedule(self, schedule_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/task-schedule/delete", json={"sid": schedule_id})
+        return response["data"]
+
+    async def toggle_task_schedule(self, schedule_id: str, enabled: bool = True) -> dict[str, Any]:
+        payload = {"sid": schedule_id, "enabled": enabled}
+        response = await self._request("POST", "task-agent/task-schedule/toggle", json=payload)
+        return response["data"]

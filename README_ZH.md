@@ -34,11 +34,13 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
 
 - **同步 & 异步客户端** — `VectorVeinClient` 和 `AsyncVectorVeinClient`
 - **工作流执行** — 运行工作流、轮询状态、通过 API 创建工作流
+- **工作流管理接口** — 列表/更新工作流、运行记录、调度、模板、标签、回收站、快速入口
 - **工作流构建器** — 用 Python 代码构建工作流，支持 50+ 节点类型
 - **AI 智能体管理** — 创建智能体、运行任务、管理执行周期
 - **文件上传** — 上传文件到平台
 - **访问密钥管理** — 创建、列出、更新、删除访问密钥
-- **智能体工作空间** — 读写、列出智能体工作空间中的文件
+- **智能体工作空间** — 读写/列出/打包文件，并触发容器同步
+- **用户接口** — 获取当前用户信息、校验 API Key
 
 ## 工作流执行
 
@@ -89,6 +91,29 @@ workflow = client.create_workflow(
     language="zh-CN",
 )
 print(workflow.wid)
+```
+
+### 工作流管理接口
+
+```python
+# 工作流
+wf = client.get_workflow("workflow_id")
+items = client.list_workflows(page=1, page_size=20)
+client.update_workflow("workflow_id", data=wf.data, title="更新后的标题")
+
+# 模板 / 标签
+templates = client.list_workflow_templates(page=1, page_size=20)
+tags = client.list_workflow_tags()
+
+# 运行记录 / 调度
+records = client.list_workflow_run_records(page=1, page_size=20)
+schedules = client.list_workflow_run_schedules(page=1, page_size=20)
+
+# 向量库 / 关系库数据资产
+vector_dbs = client.list_vector_databases(page=1, page_size=20)
+objects = client.list_vector_database_objects("vid_1", page=1, page_size=20)
+tables = client.list_relational_database_tables("rid_1", page=1, page_size=20)
+records = client.list_relational_database_table_records("tid_1", page=1, page_size=20)
 ```
 
 ## 工作流构建器
@@ -203,7 +228,36 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
 ```python
 client.pause_agent_task(task_id=task.task_id)     # 暂停
 client.resume_agent_task(task_id=task.task_id)     # 恢复
-client.continue_agent_task(task_id=task.task_id, task_info=TaskInfo(text="也查一下 arxiv"))  # 追加指令
+client.continue_agent_task(task_id=task.task_id, message="也查一下 arxiv")  # 追加指令
+
+# 添加待处理消息与任务偏好
+client.add_pending_message(task_id=task.task_id, message="优先检查安全风险")
+client.toggle_agent_task_favorite(task_id=task.task_id, is_favorited=True)
+
+# 提示词优化相关能力
+client.start_prompt_optimization(task_id=task.task_id, optimization_direction="提升指令清晰度")
+optimizer = client.get_prompt_optimizer_config()
+
+# 收藏智能体与系统提示词更新
+favorites = client.list_favorite_agents(page=1, page_size=20)
+client.update_agent_system_prompt(agent_id=agent.agent_id, system_prompt="你需要简洁且准确地回答。")
+```
+
+### 智能体生态接口
+
+```python
+# 合集 / 标签
+collections = client.list_agent_collections(page=1, page_size=20)
+tags = client.list_agent_tags()
+
+# 技能 / 用户记忆
+skills = client.list_skills(page=1, page_size=20)
+memories = client.list_user_memories(page=1, page_size=20)
+
+# MCP / 工作流工具 / 定时任务
+servers = client.list_mcp_servers(page=1, page_size=20)
+tools = client.list_my_workflow_tools()
+schedules = client.list_task_schedules(page=1, page_size=20)
 ```
 
 ## 文件上传
@@ -243,6 +297,23 @@ client.write_workspace_file(workspace_id="ws_id", file_path="output.txt", conten
 
 # 下载文件
 url = client.download_workspace_file(workspace_id="ws_id", file_path="result.csv")
+
+# 打包整个工作空间并获取下载链接
+zip_info = client.zip_workspace_files(workspace_id="ws_id")
+print(zip_info["download_url"])
+
+# 触发容器到 OSS 的异步同步（Computer Agent 工作空间）
+client.sync_workspace_container_to_oss(workspace_id="ws_id")
+```
+
+## 用户接口
+
+```python
+identity = client.validate_api_key()
+print(identity.user_id, identity.username)
+
+profile = client.get_user_info()
+print(profile["username"], profile["credits"])
 ```
 
 ## 异常处理

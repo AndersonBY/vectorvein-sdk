@@ -34,11 +34,13 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
 
 - **Sync & Async clients** — `VectorVeinClient` and `AsyncVectorVeinClient`
 - **Workflow execution** — run workflows, poll status, create workflows via API
+- **Workflow management APIs** — list/update workflows, records, schedules, templates, tags, trash, fast access
 - **Workflow builder** — programmatically construct workflows with 50+ node types
 - **AI Agent management** — create agents, run tasks, manage cycles
 - **File upload** — upload files to the platform
 - **Access key management** — create, list, update, delete access keys
-- **Agent workspace** — read/write/list files in agent workspaces
+- **Agent workspace** — read/write/list/zip files and trigger container sync
+- **User APIs** — get current user info and validate API key
 
 ## Workflow Execution
 
@@ -89,6 +91,29 @@ workflow = client.create_workflow(
     language="en-US",
 )
 print(workflow.wid)
+```
+
+### Workflow Management APIs
+
+```python
+# Workflows
+wf = client.get_workflow("workflow_id")
+items = client.list_workflows(page=1, page_size=20)
+client.update_workflow("workflow_id", data=wf.data, title="Updated title")
+
+# Templates / Tags
+templates = client.list_workflow_templates(page=1, page_size=20)
+tags = client.list_workflow_tags()
+
+# Run records / schedules
+records = client.list_workflow_run_records(page=1, page_size=20)
+schedules = client.list_workflow_run_schedules(page=1, page_size=20)
+
+# Vector / relational data assets
+vector_dbs = client.list_vector_databases(page=1, page_size=20)
+objects = client.list_vector_database_objects("vid_1", page=1, page_size=20)
+tables = client.list_relational_database_tables("rid_1", page=1, page_size=20)
+records = client.list_relational_database_table_records("tid_1", page=1, page_size=20)
 ```
 
 ## Workflow Builder
@@ -203,7 +228,36 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
 ```python
 client.pause_agent_task(task_id=task.task_id)
 client.resume_agent_task(task_id=task.task_id)
-client.continue_agent_task(task_id=task.task_id, task_info=TaskInfo(text="Also check arxiv"))
+client.continue_agent_task(task_id=task.task_id, message="Also check arxiv")
+
+# Pending input and task preferences
+client.add_pending_message(task_id=task.task_id, message="Prioritize security checks")
+client.toggle_agent_task_favorite(task_id=task.task_id, is_favorited=True)
+
+# Prompt optimization helpers
+client.start_prompt_optimization(task_id=task.task_id, optimization_direction="Improve instruction clarity")
+optimizer = client.get_prompt_optimizer_config()
+
+# Agent favorites and system-prompt updates
+favorites = client.list_favorite_agents(page=1, page_size=20)
+client.update_agent_system_prompt(agent_id=agent.agent_id, system_prompt="You are concise and accurate.")
+```
+
+### Agent Ecosystem APIs
+
+```python
+# Collections / tags
+collections = client.list_agent_collections(page=1, page_size=20)
+tags = client.list_agent_tags()
+
+# Skills / user memory
+skills = client.list_skills(page=1, page_size=20)
+memories = client.list_user_memories(page=1, page_size=20)
+
+# MCP / workflow tools / schedules
+servers = client.list_mcp_servers(page=1, page_size=20)
+tools = client.list_my_workflow_tools()
+schedules = client.list_task_schedules(page=1, page_size=20)
 ```
 
 ## File Upload
@@ -243,6 +297,23 @@ client.write_workspace_file(workspace_id="ws_id", file_path="output.txt", conten
 
 # Download
 url = client.download_workspace_file(workspace_id="ws_id", file_path="result.csv")
+
+# Zip all files in workspace
+zip_info = client.zip_workspace_files(workspace_id="ws_id")
+print(zip_info["download_url"])
+
+# Trigger async container-to-OSS sync (Computer Agent workspace)
+client.sync_workspace_container_to_oss(workspace_id="ws_id")
+```
+
+## User APIs
+
+```python
+identity = client.validate_api_key()
+print(identity.user_id, identity.username)
+
+profile = client.get_user_info()
+print(profile["username"], profile["credits"])
 ```
 
 ## Exceptions

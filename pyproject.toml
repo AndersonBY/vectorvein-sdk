@@ -85,6 +85,7 @@ include = [
   "src/vectorvein/api/file_upload.py",
   "src/vectorvein/api/task_agent.py",
   "src/vectorvein/api/agent_workspace.py",
+  "src/vectorvein/api/user.py",
 ]
 
 [tool.ty.overrides.rules]

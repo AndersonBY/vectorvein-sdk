@@ -6,10 +6,12 @@ from .access_key import AccessKeySyncMixin, AccessKeyAsyncMixin
 from .file_upload import FileUploadSyncMixin, FileUploadAsyncMixin
 from .task_agent import TaskAgentSyncMixin, TaskAgentAsyncMixin
 from .agent_workspace import AgentWorkspaceSyncMixin, AgentWorkspaceAsyncMixin
+from .user import UserSyncMixin, UserAsyncMixin
 
 
 class VectorVeinClient(
     BaseSyncClient,
+    UserSyncMixin,
     WorkflowSyncMixin,
     AccessKeySyncMixin,
     FileUploadSyncMixin,
@@ -23,6 +25,7 @@ class VectorVeinClient(
 
 class AsyncVectorVeinClient(
     BaseAsyncClient,
+    UserAsyncMixin,
     WorkflowAsyncMixin,
     AccessKeyAsyncMixin,
     FileUploadAsyncMixin,

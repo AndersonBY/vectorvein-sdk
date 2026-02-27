@@ -2,6 +2,7 @@
 
 from .client import VectorVeinClient, AsyncVectorVeinClient
 from .models import (
+    APIUserIdentity,
     VApp,
     AccessKey,
     WorkflowInputField,
@@ -14,6 +15,7 @@ from .models import (
     FileUploadResult,
     # Task Agent Models
     AttachmentDetail,
+    OssAttachmentDetail,
     TaskInfo,
     AgentDefinition,
     AgentSettings,
@@ -44,6 +46,7 @@ from .exceptions import (
 __all__ = [
     "VectorVeinClient",
     "AsyncVectorVeinClient",
+    "APIUserIdentity",
     "VApp",
     "AccessKey",
     "WorkflowInputField",
@@ -56,6 +59,7 @@ __all__ = [
     "FileUploadResult",
     # Task Agent Models
     "AttachmentDetail",
+    "OssAttachmentDetail",
     "TaskInfo",
     "AgentDefinition",
     "AgentSettings",

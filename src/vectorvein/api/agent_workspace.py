@@ -201,6 +201,18 @@ class AgentWorkspaceSyncMixin:
         response = self._request("POST", "agent-workspace/delete-file", json=payload)
         return response["data"]
 
+    def zip_workspace_files(self, workspace_id: str) -> dict[str, Any]:
+        """Zip all workspace files and return download info."""
+        payload = {"workspace_id": workspace_id}
+        response = self._request("POST", "agent-workspace/zip-files", json=payload)
+        return response["data"]
+
+    def sync_workspace_container_to_oss(self, workspace_id: str) -> dict[str, Any]:
+        """Trigger async sync from workspace container to OSS."""
+        payload = {"workspace_id": workspace_id}
+        response = self._request("POST", "agent-workspace/sync-container-to-oss", json=payload)
+        return response["data"]
+
 
 class AgentWorkspaceAsyncMixin:
     """Asynchronous agent workspace API methods"""
@@ -352,4 +364,16 @@ class AgentWorkspaceAsyncMixin:
         """
         payload = {"workspace_id": workspace_id, "file_path": file_path}
         response = await self._request("POST", "agent-workspace/delete-file", json=payload)
+        return response["data"]
+
+    async def zip_workspace_files(self, workspace_id: str) -> dict[str, Any]:
+        """Async zip all workspace files and return download info."""
+        payload = {"workspace_id": workspace_id}
+        response = await self._request("POST", "agent-workspace/zip-files", json=payload)
+        return response["data"]
+
+    async def sync_workspace_container_to_oss(self, workspace_id: str) -> dict[str, Any]:
+        """Async trigger sync from workspace container to OSS."""
+        payload = {"workspace_id": workspace_id}
+        response = await self._request("POST", "agent-workspace/sync-container-to-oss", json=payload)
         return response["data"]
