@@ -37,6 +37,14 @@ ENV_API_KEY = "VECTORVEIN_API_KEY"
 ENV_BASE_URL = "VECTORVEIN_BASE_URL"
 GLOBAL_FLAG_OPTIONS = {"--compact", "--debug", "--version"}
 GLOBAL_VALUE_OPTIONS = {"--api-key", "--base-url", "--format"}
+WORKFLOW_LIST_HIDDEN_FIELDS = {
+    "language",
+    "images",
+    "is_fast_access",
+    "browser_settings",
+    "chrome_settings",
+    "use_in_wechat",
+}
 
 
 class CLIUsageError(ValueError):
@@ -258,6 +266,73 @@ def _collect_workflow_input_fields(args: argparse.Namespace) -> list[WorkflowInp
     return [_parse_workflow_input_field(item, f"input_fields[{idx}]") for idx, item in enumerate(raw_items)]
 
 
+def _collect_optional_workflow_input_fields(args: argparse.Namespace) -> list[WorkflowInputField]:
+    raw_items: list[Any] = []
+
+    if args.input_fields:
+        raw_items.extend(_load_json_array(args.input_fields, "--input-fields"))
+
+    for index, raw in enumerate(args.input_field or [], start=1):
+        raw_items.append(_load_json_value(raw, f"--input-field[{index}]"))
+
+    return [_parse_workflow_input_field(item, f"input_fields[{idx}]") for idx, item in enumerate(raw_items)]
+
+
+def _parse_upload_to_spec(spec: str, source: str) -> tuple[str, str, Path]:
+    parts = spec.split(":", 2)
+    if len(parts) != 3:
+        raise CLIUsageError(f"{source} must be 'node_id:field_name:local_file_path'.")
+
+    node_id = parts[0].strip()
+    field_name = parts[1].strip()
+    path_text = parts[2].strip()
+    if not node_id:
+        raise CLIUsageError(f"{source} is missing node_id.")
+    if not field_name:
+        raise CLIUsageError(f"{source} is missing field_name.")
+    if not path_text:
+        raise CLIUsageError(f"{source} is missing local_file_path.")
+
+    local_path = Path(path_text)
+    if not local_path.exists():
+        raise CLIUsageError(f"{source} file does not exist: {local_path}")
+    if not local_path.is_file():
+        raise CLIUsageError(f"{source} path must point to a file: {local_path}")
+    return node_id, field_name, local_path
+
+
+def _collect_uploaded_workflow_input_fields(args: argparse.Namespace, client: VectorVeinClient) -> list[WorkflowInputField]:
+    upload_specs = list(args.upload_to or [])
+    if not upload_specs:
+        return []
+
+    grouped_paths: dict[tuple[str, str], list[Path]] = {}
+    for index, spec in enumerate(upload_specs, start=1):
+        node_id, field_name, local_path = _parse_upload_to_spec(spec, f"--upload-to[{index}]")
+        grouped_paths.setdefault((node_id, field_name), []).append(local_path)
+
+    uploaded_input_fields: list[WorkflowInputField] = []
+    for (node_id, field_name), paths in grouped_paths.items():
+        uploaded_paths: list[str] = []
+        for local_path in paths:
+            upload_result = client.upload_file(str(local_path))
+            uploaded_paths.append(upload_result.oss_path)
+
+        upload_as = str(args.upload_as)
+        if upload_as == "single":
+            if len(uploaded_paths) != 1:
+                raise CLIUsageError(f"Field {node_id}:{field_name} received {len(uploaded_paths)} files, but --upload-as single requires exactly one file.")
+            value: Any = uploaded_paths[0]
+        elif upload_as == "list":
+            value = uploaded_paths
+        else:
+            value = uploaded_paths[0] if len(uploaded_paths) == 1 else uploaded_paths
+
+        uploaded_input_fields.append(WorkflowInputField(node_id=node_id, field_name=field_name, value=value))
+
+    return uploaded_input_fields
+
+
 def _parse_attachment_item(value: Any, source: str) -> AttachmentDetail | OssAttachmentDetail:
     if not isinstance(value, dict):
         raise CLIUsageError(f"{source} must be a JSON object")
@@ -345,7 +420,11 @@ def _cmd_user_validate_api_key(args: argparse.Namespace, client: VectorVeinClien
 
 
 def _cmd_workflow_run(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    input_fields = _collect_workflow_input_fields(args)
+    explicit_input_fields = _collect_optional_workflow_input_fields(args)
+    uploaded_input_fields = _collect_uploaded_workflow_input_fields(args, client)
+    input_fields = explicit_input_fields + uploaded_input_fields
+    if not input_fields:
+        raise CLIUsageError("No workflow input fields provided. Use --input-field/--input-fields, or --upload-to for file-based inputs.")
 
     result = client.run_workflow(
         wid=args.wid,
@@ -369,8 +448,25 @@ def _cmd_workflow_status(args: argparse.Namespace, client: VectorVeinClient) -> 
     )
 
 
+def _trim_workflow_list_fields(data: dict[str, Any]) -> dict[str, Any]:
+    workflows = data.get("workflows")
+    if not isinstance(workflows, list):
+        return data
+
+    trimmed_workflows: list[Any] = []
+    for workflow in workflows:
+        if isinstance(workflow, dict):
+            trimmed_workflows.append({key: value for key, value in workflow.items() if key not in WORKFLOW_LIST_HIDDEN_FIELDS})
+        else:
+            trimmed_workflows.append(workflow)
+
+    result = dict(data)
+    result["workflows"] = trimmed_workflows
+    return result
+
+
 def _cmd_workflow_list(args: argparse.Namespace, client: VectorVeinClient) -> dict[str, Any]:
-    return client.list_workflows(
+    response = client.list_workflows(
         page=args.page,
         page_size=args.page_size,
         tags=args.tag or None,
@@ -378,10 +474,33 @@ def _cmd_workflow_list(args: argparse.Namespace, client: VectorVeinClient) -> di
         sort_order=args.sort_order,
         search_text=args.search_text,
     )
+    return _trim_workflow_list_fields(response)
 
 
 def _cmd_workflow_get(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.get_workflow(wid=args.wid)
+
+
+def _cmd_file_upload(args: argparse.Namespace, client: VectorVeinClient) -> dict[str, Any]:
+    uploaded_files: list[dict[str, Any]] = []
+    for index, path_text in enumerate(args.path or [], start=1):
+        local_path = Path(path_text)
+        if not local_path.exists():
+            raise CLIUsageError(f"--path[{index}] does not exist: {local_path}")
+        if not local_path.is_file():
+            raise CLIUsageError(f"--path[{index}] must be a file path: {local_path}")
+
+        upload_result = client.upload_file(str(local_path))
+        uploaded_files.append(
+            {
+                "local_path": str(local_path),
+                "oss_path": upload_result.oss_path,
+                "original_filename": upload_result.original_filename,
+                "file_size": upload_result.file_size,
+                "content_type": upload_result.content_type,
+            }
+        )
+    return {"files": uploaded_files}
 
 
 def _cmd_task_agent_agent_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -603,6 +722,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  vectorvein auth whoami\n"
             "  vectorvein --format json auth whoami\n"
             '  vectorvein workflow run --wid wf_xxx --input-field \'{"node_id":"n1","field_name":"text","value":"Hello"}\'\n'
+            "  vectorvein workflow run --wid wf_xxx --upload-to n1:upload_files:./report.pdf\n"
+            "  vectorvein file upload --path ./report.pdf --path ./appendix.pdf\n"
             "  vectorvein workflow status --rid rid_xxx\n"
             '  vectorvein task-agent task create --agent-id agent_xxx --text "Summarize this article"\n'
             "  vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20\n"
@@ -653,12 +774,18 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_run = workflow_sub.add_parser(
         "run",
         help="Run a workflow and optionally wait for completion.",
-        description=("Run a workflow.\nProvide input fields by repeating --input-field with JSON objects,\nor pass a JSON array using --input-fields."),
+        description=(
+            "Run a workflow.\n"
+            "Provide normal inputs via --input-field/--input-fields.\n"
+            "For file fields, use --upload-to to upload local files and bind OSS paths into workflow input fields."
+        ),
         epilog=(
             "Examples:\n"
             '  vectorvein workflow run --wid wf_x --input-field \'{"node_id":"n1","field_name":"text","value":"hello"}\'\n'
             "  vectorvein workflow run --wid wf_x --input-fields @inputs.json --wait --timeout 180\n"
-            '  vectorvein workflow run --wid wf_x --input-fields \'[{"node_id":"n1","field_name":"text","value":"hello"}]\''
+            '  vectorvein workflow run --wid wf_x --input-fields \'[{"node_id":"n1","field_name":"text","value":"hello"}]\'\n'
+            "  vectorvein workflow run --wid wf_x --upload-to n1:upload_files:./report.pdf\n"
+            "  vectorvein workflow run --wid wf_x --upload-to n1:upload_files:./a.pdf --upload-to n1:upload_files:./b.pdf --upload-as list"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -674,6 +801,18 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_run.add_argument("--wait", action="store_true", help="Wait until workflow finishes (polling).")
     workflow_run.add_argument("--timeout", type=int, default=300, help="Timeout in seconds when --wait is set.")
     workflow_run.add_argument("--api-key-type", choices=("WORKFLOW", "VAPP"), default="WORKFLOW", help="API key type header.")
+    workflow_run.add_argument(
+        "--upload-to",
+        action="append",
+        default=[],
+        help="Upload file and bind to field. Format: node_id:field_name:local_file_path. Repeat for multiple files.",
+    )
+    workflow_run.add_argument(
+        "--upload-as",
+        choices=("auto", "single", "list"),
+        default="auto",
+        help="How uploaded paths map to field value (default: auto).",
+    )
     workflow_run.set_defaults(handler=_cmd_workflow_run, command="workflow run")
 
     workflow_status = workflow_sub.add_parser("status", help="Check workflow run status by rid.")
@@ -694,6 +833,14 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_get = workflow_sub.add_parser("get", help="Get workflow details.")
     workflow_get.add_argument("--wid", required=True, help="Workflow ID.")
     workflow_get.set_defaults(handler=_cmd_workflow_get, command="workflow get")
+
+    file_parser = top_level.add_parser("file", help="File upload commands.")
+    file_sub = file_parser.add_subparsers(dest="file_command")
+    file_sub.required = True
+
+    file_upload = file_sub.add_parser("upload", help="Upload local file(s) and return OSS path(s).")
+    file_upload.add_argument("--path", action="append", required=True, help="Local file path to upload. Repeat for multiple files.")
+    file_upload.set_defaults(handler=_cmd_file_upload, command="file upload")
 
     task_agent_parser = top_level.add_parser("task-agent", help="Task-agent related commands.")
     task_agent_sub = task_agent_parser.add_subparsers(dest="task_agent_group")

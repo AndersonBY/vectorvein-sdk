@@ -70,8 +70,20 @@ vectorvein --format json auth whoami
 vectorvein workflow run \
   --wid wf_xxx \
   --input-field '{"node_id":"n1","field_name":"text","value":"你好"}'
+vectorvein workflow run \
+  --wid wf_xxx \
+  --upload-to n1:upload_files:./report.pdf
+vectorvein workflow run \
+  --wid wf_xxx \
+  --upload-to n1:upload_files:./a.pdf \
+  --upload-to n1:upload_files:./b.pdf \
+  --upload-as list
 vectorvein workflow status --rid rid_xxx
 vectorvein workflow list --page 1 --page-size 10
+
+# 文件上传
+vectorvein file upload --path ./report.pdf
+vectorvein file upload --path ./a.pdf --path ./b.pdf
 
 # Task Agent
 vectorvein task-agent agent list --page 1 --page-size 10
@@ -88,12 +100,14 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 ```
 
 `auth whoami` 返回字段为 `uid`、`username`、`email`、`credits`、`date_joined`（不会暴露内部自增 `user_id`）。
+`workflow list` 默认隐藏冗余字段：`language`、`images`、`is_fast_access`、`browser_settings`、`chrome_settings`、`use_in_wechat`。
 
 ### JSON 参数规则
 
 - `--input-field`、`--attachments`、`--body` 等参数支持直接传入 JSON 字符串。
 - 也支持 `@file.json` 形式，例如：`--input-fields @inputs.json`。
 - `workflow run` 的输入字段对象必须包含：`node_id`、`field_name`、`value`。
+- `workflow run --upload-to` 的格式为：`node_id:field_name:local_file_path`（多文件可重复传该参数）。
 
 ## 功能概览
 

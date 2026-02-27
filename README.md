@@ -70,8 +70,20 @@ vectorvein --format json auth whoami
 vectorvein workflow run \
   --wid wf_xxx \
   --input-field '{"node_id":"n1","field_name":"text","value":"Hello"}'
+vectorvein workflow run \
+  --wid wf_xxx \
+  --upload-to n1:upload_files:./report.pdf
+vectorvein workflow run \
+  --wid wf_xxx \
+  --upload-to n1:upload_files:./a.pdf \
+  --upload-to n1:upload_files:./b.pdf \
+  --upload-as list
 vectorvein workflow status --rid rid_xxx
 vectorvein workflow list --page 1 --page-size 10
+
+# File upload
+vectorvein file upload --path ./report.pdf
+vectorvein file upload --path ./a.pdf --path ./b.pdf
 
 # Task Agent
 vectorvein task-agent agent list --page 1 --page-size 10
@@ -88,12 +100,14 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 ```
 
 `auth whoami` returns `uid`, `username`, `email`, `credits`, and `date_joined` (it does not expose internal numeric user IDs).
+`workflow list` hides verbose fields by default: `language`, `images`, `is_fast_access`, `browser_settings`, `chrome_settings`, `use_in_wechat`.
 
 ### JSON Input Rules
 
 - Options like `--input-field`, `--attachments`, `--body` accept inline JSON.
 - You can also pass `@file.json`, for example: `--input-fields @inputs.json`.
 - For `workflow run`, input field objects must include: `node_id`, `field_name`, `value`.
+- `workflow run --upload-to` format: `node_id:field_name:local_file_path` (repeat this option for multiple files).
 
 ## Features
 
