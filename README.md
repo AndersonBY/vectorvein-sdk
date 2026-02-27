@@ -30,6 +30,67 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
         print(f"{output.title}: {output.value}")
 ```
 
+## CLI
+
+After installation you can run:
+
+```bash
+vectorvein --help
+```
+
+Install methods that expose the `vectorvein` command:
+
+```bash
+pip install vectorvein-sdk
+uv tool install vectorvein-sdk
+```
+
+### CLI Design (Agent-Friendly)
+
+- **Self-descriptive help**: every module and subcommand has detailed `--help` text and examples.
+- **Structured output**: success is JSON on `stdout`; errors are JSON on `stderr`.
+- **Predictable auth**: API key resolution order is `--api-key` > `VECTORVEIN_API_KEY`.
+- **Stable exit codes**:
+  - `0`: success
+  - `2`: invalid CLI usage / arguments
+  - `3`: authentication (API key) error
+  - `4`: API business error
+  - `5`: request/network error
+
+### Common CLI Examples
+
+```bash
+# Auth / user
+vectorvein --api-key YOUR_API_KEY auth whoami
+vectorvein user info
+
+# Workflow
+vectorvein workflow run \
+  --wid wf_xxx \
+  --input-field '{"node_id":"n1","field_name":"text","value":"Hello"}'
+vectorvein workflow status --rid rid_xxx
+vectorvein workflow list --page 1 --page-size 10
+
+# Task Agent
+vectorvein task-agent agent list --page 1 --page-size 10
+vectorvein task-agent task create --agent-id agent_xxx --text "Summarize this article"
+vectorvein task-agent task continue --task-id task_xxx --message "Also provide a TL;DR"
+
+# Agent Workspace
+vectorvein agent-workspace list
+vectorvein agent-workspace files --workspace-id ws_xxx
+vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20
+
+# Raw request for advanced / not-yet-wrapped operations
+vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
+```
+
+### JSON Input Rules
+
+- Options like `--input-field`, `--attachments`, `--body` accept inline JSON.
+- You can also pass `@file.json`, for example: `--input-fields @inputs.json`.
+- For `workflow run`, input field objects must include: `node_id`, `field_name`, `value`.
+
 ## Features
 
 - **Sync & Async clients** — `VectorVeinClient` and `AsyncVectorVeinClient`

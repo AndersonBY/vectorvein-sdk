@@ -30,6 +30,67 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
         print(f"{output.title}: {output.value}")
 ```
 
+## CLI 命令行工具
+
+安装后可直接运行：
+
+```bash
+vectorvein --help
+```
+
+以下安装方式都会提供 `vectorvein` 命令：
+
+```bash
+pip install vectorvein-sdk
+uv tool install vectorvein-sdk
+```
+
+### CLI 设计目标（对 Agent 友好）
+
+- **帮助信息可自解释**：各模块与子命令都提供详细 `--help` 与示例。
+- **输出结构稳定**：成功结果输出到 `stdout`（JSON）；错误输出到 `stderr`（JSON）。
+- **鉴权优先级明确**：API Key 解析顺序为 `--api-key` > `VECTORVEIN_API_KEY`。
+- **退出码固定**：
+  - `0`：成功
+  - `2`：参数/调用方式错误
+  - `3`：鉴权（API Key）错误
+  - `4`：业务 API 错误
+  - `5`：请求/网络错误
+
+### 常用 CLI 示例
+
+```bash
+# 鉴权 / 用户
+vectorvein --api-key YOUR_API_KEY auth whoami
+vectorvein user info
+
+# 工作流
+vectorvein workflow run \
+  --wid wf_xxx \
+  --input-field '{"node_id":"n1","field_name":"text","value":"你好"}'
+vectorvein workflow status --rid rid_xxx
+vectorvein workflow list --page 1 --page-size 10
+
+# Task Agent
+vectorvein task-agent agent list --page 1 --page-size 10
+vectorvein task-agent task create --agent-id agent_xxx --text "请总结这篇文章"
+vectorvein task-agent task continue --task-id task_xxx --message "再给一个 TL;DR"
+
+# 智能体工作空间
+vectorvein agent-workspace list
+vectorvein agent-workspace files --workspace-id ws_xxx
+vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20
+
+# 高级用法：调用暂未封装成高级命令的 API
+vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
+```
+
+### JSON 参数规则
+
+- `--input-field`、`--attachments`、`--body` 等参数支持直接传入 JSON 字符串。
+- 也支持 `@file.json` 形式，例如：`--input-fields @inputs.json`。
+- `workflow run` 的输入字段对象必须包含：`node_id`、`field_name`、`value`。
+
 ## 功能概览
 
 - **同步 & 异步客户端** — `VectorVeinClient` 和 `AsyncVectorVeinClient`

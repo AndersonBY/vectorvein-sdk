@@ -12,6 +12,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "0.3.74"
 
+[project.scripts]
+vectorvein = "vectorvein.cli.main:main"
+
 [build-system]
 build-backend = "pdm.backend"
 requires = ["pdm-backend"]
