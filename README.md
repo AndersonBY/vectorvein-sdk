@@ -80,20 +80,53 @@ vectorvein workflow run \
   --upload-as list
 vectorvein workflow status --rid rid_xxx
 vectorvein workflow list --page 1 --page-size 10
+vectorvein workflow get --wid wf_xxx
+vectorvein workflow describe --wid wf_xxx
+vectorvein workflow create --title 'My Workflow' --source-wid wf_xxx
+vectorvein workflow update --wid wf_xxx --data @workflow_data.json --title 'Updated'
+vectorvein workflow delete --wid wf_xxx
+vectorvein workflow search --query 'translation'
+
+# Workflow run records
+vectorvein workflow run-record list --wid wf_xxx --status FINISHED
+vectorvein workflow run-record get --rid rid_xxx
+vectorvein workflow run-record stop --rid rid_xxx
 
 # File upload
 vectorvein file upload --path ./report.pdf
 vectorvein file upload --path ./a.pdf --path ./b.pdf
 
-# Task Agent
+# Task Agent — agents
 vectorvein task-agent agent list --page 1 --page-size 10
+vectorvein task-agent agent get --agent-id agent_xxx
+vectorvein task-agent agent create --name 'My Bot' --system-prompt 'Be helpful'
+vectorvein task-agent agent update --agent-id agent_xxx --name 'New Name'
+vectorvein task-agent agent delete --agent-id agent_xxx
+vectorvein task-agent agent search --query 'translator'
+
+# Task Agent — tasks
 vectorvein task-agent task create --agent-id agent_xxx --text "Summarize this article"
-vectorvein task-agent task continue --task-id task_xxx --message "Also provide a TL;DR"
+vectorvein task-agent task create --agent-id agent_xxx --text "Do it" --wait --timeout 120
+vectorvein task-agent task continue --task-id task_xxx --message "Also provide a TL;DR" --wait
+vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "Yes, proceed"
+vectorvein task-agent task get --task-id task_xxx
+vectorvein task-agent task list --status running --agent-id agent_xxx
+vectorvein task-agent task search --query 'summary'
+vectorvein task-agent task delete --task-id task_xxx
+
+# Task Agent — cycles
+vectorvein task-agent cycle list --task-id task_xxx
+vectorvein task-agent cycle get --cycle-id cycle_xxx
 
 # Agent Workspace
 vectorvein agent-workspace list
 vectorvein agent-workspace files --workspace-id ws_xxx
 vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20
+vectorvein agent-workspace write --workspace-id ws_xxx --file-path output.txt --content 'done'
+vectorvein agent-workspace delete --workspace-id ws_xxx --file-path old.txt
+vectorvein agent-workspace download --workspace-id ws_xxx --file-path result.csv
+vectorvein agent-workspace zip --workspace-id ws_xxx
+vectorvein agent-workspace sync --workspace-id ws_xxx
 
 # Raw request for advanced / not-yet-wrapped operations
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'

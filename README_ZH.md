@@ -80,20 +80,53 @@ vectorvein workflow run \
   --upload-as list
 vectorvein workflow status --rid rid_xxx
 vectorvein workflow list --page 1 --page-size 10
+vectorvein workflow get --wid wf_xxx
+vectorvein workflow describe --wid wf_xxx
+vectorvein workflow create --title '我的工作流' --source-wid wf_xxx
+vectorvein workflow update --wid wf_xxx --data @workflow_data.json --title '更新后的标题'
+vectorvein workflow delete --wid wf_xxx
+vectorvein workflow search --query '翻译'
+
+# 工作流运行记录
+vectorvein workflow run-record list --wid wf_xxx --status FINISHED
+vectorvein workflow run-record get --rid rid_xxx
+vectorvein workflow run-record stop --rid rid_xxx
 
 # 文件上传
 vectorvein file upload --path ./report.pdf
 vectorvein file upload --path ./a.pdf --path ./b.pdf
 
-# Task Agent
+# Task Agent — 智能体管理
 vectorvein task-agent agent list --page 1 --page-size 10
+vectorvein task-agent agent get --agent-id agent_xxx
+vectorvein task-agent agent create --name '我的助手' --system-prompt '你是一个有用的助手'
+vectorvein task-agent agent update --agent-id agent_xxx --name '新名称'
+vectorvein task-agent agent delete --agent-id agent_xxx
+vectorvein task-agent agent search --query '翻译'
+
+# Task Agent — 任务管理
 vectorvein task-agent task create --agent-id agent_xxx --text "请总结这篇文章"
-vectorvein task-agent task continue --task-id task_xxx --message "再给一个 TL;DR"
+vectorvein task-agent task create --agent-id agent_xxx --text "执行任务" --wait --timeout 120
+vectorvein task-agent task continue --task-id task_xxx --message "再给一个 TL;DR" --wait
+vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "好的，继续"
+vectorvein task-agent task get --task-id task_xxx
+vectorvein task-agent task list --status running --agent-id agent_xxx
+vectorvein task-agent task search --query '总结'
+vectorvein task-agent task delete --task-id task_xxx
+
+# Task Agent — 执行周期
+vectorvein task-agent cycle list --task-id task_xxx
+vectorvein task-agent cycle get --cycle-id cycle_xxx
 
 # 智能体工作空间
 vectorvein agent-workspace list
 vectorvein agent-workspace files --workspace-id ws_xxx
 vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20
+vectorvein agent-workspace write --workspace-id ws_xxx --file-path output.txt --content '完成'
+vectorvein agent-workspace delete --workspace-id ws_xxx --file-path old.txt
+vectorvein agent-workspace download --workspace-id ws_xxx --file-path result.csv
+vectorvein agent-workspace zip --workspace-id ws_xxx
+vectorvein agent-workspace sync --workspace-id ws_xxx
 
 # 高级用法：调用暂未封装成高级命令的 API
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
