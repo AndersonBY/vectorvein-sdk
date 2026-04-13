@@ -112,7 +112,8 @@ vectorvein task-agent agent create \
 vectorvein task-agent agent update --agent-id agent_xxx --name '新名称'
 vectorvein task-agent agent delete --agent-id agent_xxx
 vectorvein task-agent agent search --query '翻译'
-vectorvein task-agent agent public-list --official true
+vectorvein task-agent agent list --is-public true
+vectorvein task-agent agent list --is-public true --official true
 vectorvein task-agent agent favorite-list --tag-ids '["tag_1"]'
 vectorvein task-agent agent duplicate --agent-id agent_xxx --add-templates true
 vectorvein task-agent agent toggle-favorite --agent-id agent_xxx --is-favorited true

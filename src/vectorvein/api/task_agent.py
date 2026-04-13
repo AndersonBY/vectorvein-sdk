@@ -274,6 +274,8 @@ class TaskAgentSyncMixin:
         page: int = 1,
         page_size: int = 10,
         search: str | None = None,
+        is_public: bool | None = None,
+        official: bool | None = None,
     ) -> AgentListResponse:
         """List agent configurations
 
@@ -281,6 +283,8 @@ class TaskAgentSyncMixin:
             page: Page number
             page_size: Page size
             search: Search keyword
+            is_public: Filter by public visibility. `true` returns public agents, `false` returns your non-public agents
+            official: Filter public agents by official status. Only valid with `is_public=true`
 
         Returns:
             AgentListResponse: Agent list response
@@ -291,6 +295,10 @@ class TaskAgentSyncMixin:
         payload = {"page": page, "page_size": page_size}
         if search:
             payload["search"] = search
+        if is_public is not None:
+            payload["is_public"] = is_public
+        if official is not None:
+            payload["official"] = official
 
         response = self._request("POST", "task-agent/agent/list", json=payload)
         return _create_agent_list_response(response["data"])
@@ -405,36 +413,6 @@ class TaskAgentSyncMixin:
         """
         payload = {"agent_id": agent_id}
         self._request("POST", "task-agent/agent/delete", json=payload)
-
-    def list_public_agents(
-        self,
-        page: int = 1,
-        page_size: int = 10,
-        search: str | None = None,
-        official: bool | None = None,
-    ) -> AgentListResponse:
-        """List public agent configurations
-
-        Args:
-            page: Page number
-            page_size: Page size
-            search: Search keyword
-            official: Filter official agents only
-
-        Returns:
-            AgentListResponse: Public agent list response
-
-        Raises:
-            VectorVeinAPIError: List error
-        """
-        payload = {"page": page, "page_size": page_size}
-        if search:
-            payload["search"] = search
-        if official is not None:
-            payload["official"] = official
-
-        response = self._request("POST", "task-agent/agent/public-list", json=payload)
-        return _create_agent_list_response(response["data"])
 
     def duplicate_agent(self, agent_id: str, add_templates: bool = False) -> Agent:
         """Duplicate agent configuration
@@ -1374,11 +1352,17 @@ class TaskAgentAsyncMixin:
         page: int = 1,
         page_size: int = 10,
         search: str | None = None,
+        is_public: bool | None = None,
+        official: bool | None = None,
     ) -> AgentListResponse:
         """Async list agent configurations"""
         payload = {"page": page, "page_size": page_size}
         if search:
             payload["search"] = search
+        if is_public is not None:
+            payload["is_public"] = is_public
+        if official is not None:
+            payload["official"] = official
 
         response = await self._request("POST", "task-agent/agent/list", json=payload)
         return _create_agent_list_response(response["data"])
@@ -1450,23 +1434,6 @@ class TaskAgentAsyncMixin:
         """Async delete agent configuration"""
         payload = {"agent_id": agent_id}
         await self._request("POST", "task-agent/agent/delete", json=payload)
-
-    async def list_public_agents(
-        self,
-        page: int = 1,
-        page_size: int = 10,
-        search: str | None = None,
-        official: bool | None = None,
-    ) -> AgentListResponse:
-        """Async list public agent configurations"""
-        payload = {"page": page, "page_size": page_size}
-        if search:
-            payload["search"] = search
-        if official is not None:
-            payload["official"] = official
-
-        response = await self._request("POST", "task-agent/agent/public-list", json=payload)
-        return _create_agent_list_response(response["data"])
 
     async def duplicate_agent(self, agent_id: str, add_templates: bool = False) -> Agent:
         """Async duplicate agent configuration"""

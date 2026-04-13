@@ -97,6 +97,16 @@ def test_agent_write_method_signatures_exclude_official_only_fields():
         assert "official_order" not in signature.parameters
 
 
+def test_agent_list_method_signatures_support_public_filters_and_remove_public_list():
+    for method in (TaskAgentSyncMixin.list_agents, TaskAgentAsyncMixin.list_agents):
+        signature = inspect.signature(method)
+        assert "is_public" in signature.parameters
+        assert "official" in signature.parameters
+
+    assert not hasattr(TaskAgentSyncMixin, "list_public_agents")
+    assert not hasattr(TaskAgentAsyncMixin, "list_public_agents")
+
+
 def test_sync_create_agent_sends_latest_agent_schema_fields():
     client = _SyncRecorder()
 
@@ -180,6 +190,40 @@ def test_sync_update_agent_sends_latest_agent_schema_fields():
     assert "official_order" not in payload
 
 
+def test_sync_list_agents_sends_public_filter_payload():
+    class _SyncListRecorder(_SyncRecorder):
+        def _request(self, method: str, endpoint: str, **kwargs: Any) -> dict[str, Any]:
+            self.calls.append((method, endpoint, kwargs))
+            return {
+                "status": 200,
+                "msg": "",
+                "data": {"agents": [_AGENT_RESPONSE], "total": 1, "page": 2, "page_size": 5, "page_count": 1},
+            }
+
+    client = _SyncListRecorder()
+
+    client.list_agents(
+        page=2,
+        page_size=5,
+        search="research",
+        is_public=True,
+        official=True,
+    )
+
+    method, endpoint, kwargs = client.calls[0]
+    payload = kwargs["json"]
+
+    assert method == "POST"
+    assert endpoint == "task-agent/agent/list"
+    assert payload == {
+        "page": 2,
+        "page_size": 5,
+        "search": "research",
+        "is_public": True,
+        "official": True,
+    }
+
+
 def test_async_create_agent_sends_latest_agent_schema_fields():
     async def _run():
         client = _AsyncRecorder()
@@ -201,6 +245,41 @@ def test_async_create_agent_sends_latest_agent_schema_fields():
         assert payload["available_mcp_tool_ids"] == ["tool_1"]
         assert "is_official" not in payload
         assert "official_order" not in payload
+
+    asyncio.run(_run())
+
+
+def test_async_list_agents_sends_public_filter_payload():
+    async def _run():
+        class _AsyncListRecorder(_AsyncRecorder):
+            async def _request(self, method: str, endpoint: str, **kwargs: Any) -> dict[str, Any]:
+                self.calls.append((method, endpoint, kwargs))
+                return {
+                    "status": 200,
+                    "msg": "",
+                    "data": {"agents": [_AGENT_RESPONSE], "total": 1, "page": 3, "page_size": 7, "page_count": 1},
+                }
+
+        client = _AsyncListRecorder()
+        await client.list_agents(
+            page=3,
+            page_size=7,
+            search="public",
+            is_public=False,
+            official=False,
+        )
+        method, endpoint, kwargs = client.calls[0]
+        payload = kwargs["json"]
+
+        assert method == "POST"
+        assert endpoint == "task-agent/agent/list"
+        assert payload == {
+            "page": 3,
+            "page_size": 7,
+            "search": "public",
+            "is_public": False,
+            "official": False,
+        }
 
     asyncio.run(_run())
 

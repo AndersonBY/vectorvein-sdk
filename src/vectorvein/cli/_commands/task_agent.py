@@ -47,7 +47,13 @@ def _merge_payload(base: dict[str, Any], extra: dict[str, Any] | None) -> dict[s
 
 
 def _cmd_task_agent_agent_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.list_agents(page=args.page, page_size=args.page_size, search=args.search)
+    return client.list_agents(
+        page=args.page,
+        page_size=args.page_size,
+        search=args.search,
+        is_public=args.is_public,
+        official=args.official,
+    )
 
 
 def _cmd_task_agent_agent_get(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -121,11 +127,13 @@ def _cmd_task_agent_agent_delete(args: argparse.Namespace, client: VectorVeinCli
 
 
 def _cmd_task_agent_agent_search(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.list_agents(page=args.page, page_size=args.page_size, search=args.query)
-
-
-def _cmd_task_agent_agent_public_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.list_public_agents(page=args.page, page_size=args.page_size, search=args.search, official=args.official)
+    return client.list_agents(
+        page=args.page,
+        page_size=args.page_size,
+        search=args.query,
+        is_public=args.is_public,
+        official=args.official,
+    )
 
 
 def _cmd_task_agent_agent_favorite_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:

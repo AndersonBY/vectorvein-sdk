@@ -105,6 +105,19 @@ def _add_attachment_arguments(parser: argparse.ArgumentParser, *, allow_oss_key:
     parser.add_argument("--attachments", help="JSON array or @file for attachments.")
 
 
+def _add_agent_public_filter_arguments(parser: argparse.ArgumentParser) -> None:
+    add_bool_text_argument(
+        parser,
+        "--is-public",
+        help_text="Filter by public visibility. true returns public agents, false returns your non-public agents.",
+    )
+    add_bool_text_argument(
+        parser,
+        "--official",
+        help_text="Filter public agents by official status. Only valid when --is-public true.",
+    )
+
+
 def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     agent_parser = task_agent_sub.add_parser(
         "agent",
@@ -126,10 +139,16 @@ def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     agent_sub.required = True
 
     agent_list = agent_sub.add_parser(
-        "list", help="List saved agents.", **rich_parser_kwargs("List agents visible to the current account.", examples=["vectorvein task-agent agent list --search research"])
+        "list",
+        help="List saved or public agents.",
+        **rich_parser_kwargs(
+            "List your saved agents by default, or browse public agents with --is-public.",
+            examples=["vectorvein task-agent agent list --search research", "vectorvein task-agent agent list --is-public true --official true"],
+        ),
     )
     add_paging_arguments(agent_list)
     add_search_argument(agent_list)
+    _add_agent_public_filter_arguments(agent_list)
     agent_list.set_defaults(handler=task_agent_cmd._cmd_task_agent_agent_list, command="task-agent agent list")
 
     agent_get = agent_sub.add_parser(
@@ -175,21 +194,17 @@ def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     agent_delete.set_defaults(handler=task_agent_cmd._cmd_task_agent_agent_delete, command="task-agent agent delete")
 
     agent_search = agent_sub.add_parser(
-        "search", help="Search saved agents by keyword.", **rich_parser_kwargs("Search saved agents by keyword.", examples=["vectorvein task-agent agent search --query research"])
+        "search",
+        help="Search saved or public agents by keyword.",
+        **rich_parser_kwargs(
+            "Search your saved agents by default, or search public agents with --is-public.",
+            examples=["vectorvein task-agent agent search --query research", "vectorvein task-agent agent search --query planner --is-public true"],
+        ),
     )
     agent_search.add_argument("--query", required=True, help="Search keyword.")
     add_paging_arguments(agent_search)
+    _add_agent_public_filter_arguments(agent_search)
     agent_search.set_defaults(handler=task_agent_cmd._cmd_task_agent_agent_search, command="task-agent agent search")
-
-    agent_public_list = agent_sub.add_parser(
-        "public-list",
-        help="List public agents.",
-        **rich_parser_kwargs("List public agents, optionally limited to official entries.", examples=["vectorvein task-agent agent public-list --official true"]),
-    )
-    add_paging_arguments(agent_public_list)
-    add_search_argument(agent_public_list)
-    add_bool_text_argument(agent_public_list, "--official", help_text="Filter to official agents only.")
-    agent_public_list.set_defaults(handler=task_agent_cmd._cmd_task_agent_agent_public_list, command="task-agent agent public-list")
 
     agent_favorite_list = agent_sub.add_parser(
         "favorite-list",

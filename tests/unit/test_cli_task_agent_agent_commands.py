@@ -294,3 +294,136 @@ def test_agent_update_help_hides_official_only_fields(capsys: pytest.CaptureFixt
     assert "Whether the agent is shared." in out
     assert "Whether the agent is publicly visible." in out
     assert "Default: unchanged." in out
+
+
+def test_agent_group_help_hides_public_list_subcommand(capsys: pytest.CaptureFixture[str]):
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["task-agent", "agent", "-h"])
+
+    out = capsys.readouterr().out
+    assert "public-list" not in out
+    assert "favorite-list" in out
+
+
+def test_agent_list_help_shows_public_filters(capsys: pytest.CaptureFixture[str]):
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["task-agent", "agent", "list", "-h"])
+
+    out = capsys.readouterr().out
+    assert "--is-public BOOL" in out
+    assert "--official BOOL" in out
+    assert "Default: not set." in out
+
+
+def test_cli_agent_list_accepts_public_filters(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    captured: dict[str, Any] = {}
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        def list_agents(self, **kwargs: Any):
+            captured.update(kwargs)
+            return {"agents": []}
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "test_key",
+            "task-agent",
+            "agent",
+            "list",
+            "--page",
+            "2",
+            "--page-size",
+            "5",
+            "--search",
+            "public",
+            "--is-public",
+            "true",
+            "--official",
+            "true",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured == {
+        "page": 2,
+        "page_size": 5,
+        "search": "public",
+        "is_public": True,
+        "official": True,
+    }
+
+
+def test_cli_agent_search_accepts_public_filters(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    captured: dict[str, Any] = {}
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        def list_agents(self, **kwargs: Any):
+            captured.update(kwargs)
+            return {"agents": []}
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "test_key",
+            "task-agent",
+            "agent",
+            "search",
+            "--query",
+            "official",
+            "--page",
+            "3",
+            "--page-size",
+            "8",
+            "--is-public",
+            "true",
+            "--official",
+            "false",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured == {
+        "page": 3,
+        "page_size": 8,
+        "search": "official",
+        "is_public": True,
+        "official": False,
+    }
