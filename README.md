@@ -309,14 +309,17 @@ summary = format_workflow_analysis_for_llm(result, max_length=200)
 ### Create and Run an Agent Task
 
 ```python
-from vectorvein.api import VectorVeinClient, TaskInfo
+from vectorvein.api import AgentDefinition, AgentSettings, TaskInfo, VectorVeinClient
 
 with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     # Create an agent
     agent = client.create_agent(
         name="Research Assistant",
         system_prompt="You are a helpful research assistant.",
-        default_model_name="gpt-4",
+        default_model_name="gpt-5.4",
+        default_load_user_memory=True,
+        default_compress_memory_after_tokens=64000,
+        default_cloud_storage_paths=["/documents/reports"],
     )
 
     # Run a task
@@ -333,6 +336,28 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     cycles = client.list_agent_cycles(task_id=task.task_id)
     for cycle in cycles.cycles:
         print(f"Cycle {cycle.cycle_index}: {cycle.title}")
+```
+
+### Agent Schema Notes
+
+```python
+# Custom agent definitions / settings follow backend ai_agents field names.
+# Use *_after_tokens; legacy *_after_characters is removed from the SDK.
+definition = AgentDefinition(
+    model_name="glm-5.1",
+    backend_type="zhipuai",
+    compress_memory_after_tokens=64000,
+    agent_type="computer",
+    workspace_files=[],
+    sub_agent_ids=[],
+)
+
+settings = AgentSettings(
+    model_name="glm-5.1",
+    backend_type="zhipuai",
+    compress_memory_after_tokens=96000,
+    agent_type="tool",
+)
 ```
 
 ### Agent Task Control

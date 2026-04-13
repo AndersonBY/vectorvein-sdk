@@ -26,6 +26,11 @@ def _to_dict(obj):
     return obj
 
 
+def _set_if_not_none(payload: dict[str, Any], key: str, value: Any) -> None:
+    if value is not None:
+        payload[key] = value
+
+
 def _create_agent_from_response(data: dict) -> Agent:
     """Create Agent object from API response, handling missing/extra fields"""
     # Create User object
@@ -45,7 +50,8 @@ def _create_agent_from_response(data: dict) -> Agent:
         default_max_cycles=data["default_max_cycles"],
         default_allow_interruption=data["default_allow_interruption"],
         default_use_workspace=data["default_use_workspace"],
-        default_compress_memory_after_characters=data["default_compress_memory_after_characters"],
+        default_load_user_memory=data.get("default_load_user_memory"),
+        default_compress_memory_after_tokens=data["default_compress_memory_after_tokens"],
         shared=data["shared"],
         is_public=data["is_public"],
         used_count=data["used_count"],
@@ -61,9 +67,17 @@ def _create_agent_from_response(data: dict) -> Agent:
         default_agent_type=data.get("default_agent_type"),
         default_workspace_files=data.get("default_workspace_files"),
         default_sub_agent_ids=data.get("default_sub_agent_ids"),
+        required_skills=data.get("required_skills"),
+        required_skills_count=data.get("required_skills_count"),
+        default_output_verifier=data.get("default_output_verifier"),
+        default_computer_pod_setting_id=data.get("default_computer_pod_setting_id"),
+        default_cloud_storage_paths=data.get("default_cloud_storage_paths"),
+        default_cloud_storage_write_enabled=data.get("default_cloud_storage_write_enabled"),
         tags=data.get("tags"),
         available_workflows=data.get("available_workflows"),
         available_workflow_templates=data.get("available_workflow_templates"),
+        available_mcp_tools=data.get("available_mcp_tools"),
+        is_favorited=data.get("is_favorited"),
     )
 
 
@@ -147,14 +161,26 @@ class TaskAgentSyncMixin:
         avatar: str | None = None,
         description: str | None = None,
         system_prompt: str = "You are a helpful assistant.",
+        usage_hint: dict[str, Any] | None = None,
         default_model_name: str | None = None,
         default_backend_type: str | None = None,
         default_max_cycles: int = 20,
         default_allow_interruption: bool = True,
         default_use_workspace: bool = True,
-        default_compress_memory_after_characters: int = 128000,
+        default_load_user_memory: bool | None = None,
+        default_compress_memory_after_tokens: int = 128000,
+        default_agent_type: str | None = None,
+        default_workspace_files: list[dict[str, Any]] | None = None,
+        default_sub_agent_ids: list[str] | None = None,
+        required_skills: list[dict[str, Any]] | None = None,
+        default_output_verifier: str | None = None,
+        default_computer_pod_setting_id: str | None = None,
+        default_cloud_storage_paths: list[str] | None = None,
+        default_cloud_storage_write_enabled: bool | None = None,
         available_workflow_ids: list[str] | None = None,
         available_template_ids: list[str] | None = None,
+        available_mcp_tool_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
         is_official: bool = False,
@@ -167,14 +193,26 @@ class TaskAgentSyncMixin:
             avatar: Agent avatar URL
             description: Agent description
             system_prompt: System prompt
+            usage_hint: Agent usage hint metadata
             default_model_name: Default model name
             default_backend_type: Default backend type
             default_max_cycles: Default max cycles
             default_allow_interruption: Default allow interruption
             default_use_workspace: Default use workspace
-            default_compress_memory_after_characters: Default compress memory threshold
+            default_load_user_memory: Default load user memory
+            default_compress_memory_after_tokens: Default compress memory threshold
+            default_agent_type: Default agent type
+            default_workspace_files: Default workspace files
+            default_sub_agent_ids: Default sub-agent IDs
+            required_skills: Required skills configuration
+            default_output_verifier: Default output verifier script
+            default_computer_pod_setting_id: Default computer pod setting ID
+            default_cloud_storage_paths: Default cloud storage mount paths
+            default_cloud_storage_write_enabled: Allow agent to write mounted cloud storage
             available_workflow_ids: Available workflow IDs
             available_template_ids: Available template IDs
+            available_mcp_tool_ids: Available MCP tool IDs
+            tag_ids: Agent tag IDs
             shared: Whether shared
             is_public: Whether public
             is_official: Whether official
@@ -192,25 +230,31 @@ class TaskAgentSyncMixin:
             "default_max_cycles": default_max_cycles,
             "default_allow_interruption": default_allow_interruption,
             "default_use_workspace": default_use_workspace,
-            "default_compress_memory_after_characters": default_compress_memory_after_characters,
+            "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
             "is_official": is_official,
             "official_order": official_order,
         }
 
-        if avatar:
-            payload["avatar"] = avatar
-        if description:
-            payload["description"] = description
-        if default_model_name:
-            payload["default_model_name"] = default_model_name
-        if default_backend_type:
-            payload["default_backend_type"] = default_backend_type
-        if available_workflow_ids:
-            payload["available_workflow_ids"] = available_workflow_ids
-        if available_template_ids:
-            payload["available_template_ids"] = available_template_ids
+        _set_if_not_none(payload, "avatar", avatar)
+        _set_if_not_none(payload, "description", description)
+        _set_if_not_none(payload, "usage_hint", usage_hint)
+        _set_if_not_none(payload, "default_model_name", default_model_name)
+        _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
+        _set_if_not_none(payload, "default_agent_type", default_agent_type)
+        _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
+        _set_if_not_none(payload, "default_sub_agent_ids", default_sub_agent_ids)
+        _set_if_not_none(payload, "required_skills", required_skills)
+        _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
+        _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
+        _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
+        _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
+        _set_if_not_none(payload, "available_template_ids", available_template_ids)
+        _set_if_not_none(payload, "available_mcp_tool_ids", available_mcp_tool_ids)
+        _set_if_not_none(payload, "tag_ids", tag_ids)
 
         response = self._request("POST", "task-agent/agent/create", json=payload)
         return _create_agent_from_response(response["data"])
@@ -264,14 +308,26 @@ class TaskAgentSyncMixin:
         avatar: str | None = None,
         description: str | None = None,
         system_prompt: str | None = None,
+        usage_hint: dict[str, Any] | None = None,
         default_model_name: str | None = None,
         default_backend_type: str | None = None,
         default_max_cycles: int | None = None,
         default_allow_interruption: bool | None = None,
         default_use_workspace: bool | None = None,
-        default_compress_memory_after_characters: int | None = None,
+        default_load_user_memory: bool | None = None,
+        default_compress_memory_after_tokens: int | None = None,
+        default_agent_type: str | None = None,
+        default_workspace_files: list[dict[str, Any]] | None = None,
+        default_sub_agent_ids: list[str] | None = None,
+        required_skills: list[dict[str, Any]] | None = None,
+        default_output_verifier: str | None = None,
+        default_computer_pod_setting_id: str | None = None,
+        default_cloud_storage_paths: list[str] | None = None,
+        default_cloud_storage_write_enabled: bool | None = None,
         available_workflow_ids: list[str] | None = None,
         available_template_ids: list[str] | None = None,
+        available_mcp_tool_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
         is_official: bool | None = None,
@@ -285,14 +341,26 @@ class TaskAgentSyncMixin:
             avatar: Agent avatar URL
             description: Agent description
             system_prompt: System prompt
+            usage_hint: Agent usage hint metadata
             default_model_name: Default model name
             default_backend_type: Default backend type
             default_max_cycles: Default max cycles
             default_allow_interruption: Default allow interruption
             default_use_workspace: Default use workspace
-            default_compress_memory_after_characters: Default compress memory threshold
+            default_load_user_memory: Default load user memory
+            default_compress_memory_after_tokens: Default compress memory threshold
+            default_agent_type: Default agent type
+            default_workspace_files: Default workspace files
+            default_sub_agent_ids: Default sub-agent IDs
+            required_skills: Required skills configuration
+            default_output_verifier: Default output verifier script
+            default_computer_pod_setting_id: Default computer pod setting ID
+            default_cloud_storage_paths: Default cloud storage mount paths
+            default_cloud_storage_write_enabled: Allow agent to write mounted cloud storage
             available_workflow_ids: Available workflow IDs
             available_template_ids: Available template IDs
+            available_mcp_tool_ids: Available MCP tool IDs
+            tag_ids: Agent tag IDs
             shared: Whether shared
             is_public: Whether public
             is_official: Whether official
@@ -306,38 +374,34 @@ class TaskAgentSyncMixin:
         """
         payload = {"agent_id": agent_id}
 
-        if name is not None:
-            payload["name"] = name
-        if avatar is not None:
-            payload["avatar"] = avatar
-        if description is not None:
-            payload["description"] = description
-        if system_prompt is not None:
-            payload["system_prompt"] = system_prompt
-        if default_model_name is not None:
-            payload["default_model_name"] = default_model_name
-        if default_backend_type is not None:
-            payload["default_backend_type"] = default_backend_type
-        if default_max_cycles is not None:
-            payload["default_max_cycles"] = default_max_cycles
-        if default_allow_interruption is not None:
-            payload["default_allow_interruption"] = default_allow_interruption
-        if default_use_workspace is not None:
-            payload["default_use_workspace"] = default_use_workspace
-        if default_compress_memory_after_characters is not None:
-            payload["default_compress_memory_after_characters"] = default_compress_memory_after_characters
-        if available_workflow_ids is not None:
-            payload["available_workflow_ids"] = available_workflow_ids
-        if available_template_ids is not None:
-            payload["available_template_ids"] = available_template_ids
-        if shared is not None:
-            payload["shared"] = shared
-        if is_public is not None:
-            payload["is_public"] = is_public
-        if is_official is not None:
-            payload["is_official"] = is_official
-        if official_order is not None:
-            payload["official_order"] = official_order
+        _set_if_not_none(payload, "name", name)
+        _set_if_not_none(payload, "avatar", avatar)
+        _set_if_not_none(payload, "description", description)
+        _set_if_not_none(payload, "system_prompt", system_prompt)
+        _set_if_not_none(payload, "usage_hint", usage_hint)
+        _set_if_not_none(payload, "default_model_name", default_model_name)
+        _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_max_cycles", default_max_cycles)
+        _set_if_not_none(payload, "default_allow_interruption", default_allow_interruption)
+        _set_if_not_none(payload, "default_use_workspace", default_use_workspace)
+        _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
+        _set_if_not_none(payload, "default_compress_memory_after_tokens", default_compress_memory_after_tokens)
+        _set_if_not_none(payload, "default_agent_type", default_agent_type)
+        _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
+        _set_if_not_none(payload, "default_sub_agent_ids", default_sub_agent_ids)
+        _set_if_not_none(payload, "required_skills", required_skills)
+        _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
+        _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
+        _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
+        _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
+        _set_if_not_none(payload, "available_template_ids", available_template_ids)
+        _set_if_not_none(payload, "available_mcp_tool_ids", available_mcp_tool_ids)
+        _set_if_not_none(payload, "tag_ids", tag_ids)
+        _set_if_not_none(payload, "shared", shared)
+        _set_if_not_none(payload, "is_public", is_public)
+        _set_if_not_none(payload, "is_official", is_official)
+        _set_if_not_none(payload, "official_order", official_order)
 
         response = self._request("POST", "task-agent/agent/update", json=payload)
         return _create_agent_from_response(response["data"])
@@ -1254,14 +1318,26 @@ class TaskAgentAsyncMixin:
         avatar: str | None = None,
         description: str | None = None,
         system_prompt: str = "You are a helpful assistant.",
+        usage_hint: dict[str, Any] | None = None,
         default_model_name: str | None = None,
         default_backend_type: str | None = None,
         default_max_cycles: int = 20,
         default_allow_interruption: bool = True,
         default_use_workspace: bool = True,
-        default_compress_memory_after_characters: int = 128000,
+        default_load_user_memory: bool | None = None,
+        default_compress_memory_after_tokens: int = 128000,
+        default_agent_type: str | None = None,
+        default_workspace_files: list[dict[str, Any]] | None = None,
+        default_sub_agent_ids: list[str] | None = None,
+        required_skills: list[dict[str, Any]] | None = None,
+        default_output_verifier: str | None = None,
+        default_computer_pod_setting_id: str | None = None,
+        default_cloud_storage_paths: list[str] | None = None,
+        default_cloud_storage_write_enabled: bool | None = None,
         available_workflow_ids: list[str] | None = None,
         available_template_ids: list[str] | None = None,
+        available_mcp_tool_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
         is_official: bool = False,
@@ -1274,25 +1350,31 @@ class TaskAgentAsyncMixin:
             "default_max_cycles": default_max_cycles,
             "default_allow_interruption": default_allow_interruption,
             "default_use_workspace": default_use_workspace,
-            "default_compress_memory_after_characters": default_compress_memory_after_characters,
+            "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
             "is_official": is_official,
             "official_order": official_order,
         }
 
-        if avatar:
-            payload["avatar"] = avatar
-        if description:
-            payload["description"] = description
-        if default_model_name:
-            payload["default_model_name"] = default_model_name
-        if default_backend_type:
-            payload["default_backend_type"] = default_backend_type
-        if available_workflow_ids:
-            payload["available_workflow_ids"] = available_workflow_ids
-        if available_template_ids:
-            payload["available_template_ids"] = available_template_ids
+        _set_if_not_none(payload, "avatar", avatar)
+        _set_if_not_none(payload, "description", description)
+        _set_if_not_none(payload, "usage_hint", usage_hint)
+        _set_if_not_none(payload, "default_model_name", default_model_name)
+        _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
+        _set_if_not_none(payload, "default_agent_type", default_agent_type)
+        _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
+        _set_if_not_none(payload, "default_sub_agent_ids", default_sub_agent_ids)
+        _set_if_not_none(payload, "required_skills", required_skills)
+        _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
+        _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
+        _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
+        _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
+        _set_if_not_none(payload, "available_template_ids", available_template_ids)
+        _set_if_not_none(payload, "available_mcp_tool_ids", available_mcp_tool_ids)
+        _set_if_not_none(payload, "tag_ids", tag_ids)
 
         response = await self._request("POST", "task-agent/agent/create", json=payload)
         return _create_agent_from_response(response["data"])
@@ -1324,14 +1406,26 @@ class TaskAgentAsyncMixin:
         avatar: str | None = None,
         description: str | None = None,
         system_prompt: str | None = None,
+        usage_hint: dict[str, Any] | None = None,
         default_model_name: str | None = None,
         default_backend_type: str | None = None,
         default_max_cycles: int | None = None,
         default_allow_interruption: bool | None = None,
         default_use_workspace: bool | None = None,
-        default_compress_memory_after_characters: int | None = None,
+        default_load_user_memory: bool | None = None,
+        default_compress_memory_after_tokens: int | None = None,
+        default_agent_type: str | None = None,
+        default_workspace_files: list[dict[str, Any]] | None = None,
+        default_sub_agent_ids: list[str] | None = None,
+        required_skills: list[dict[str, Any]] | None = None,
+        default_output_verifier: str | None = None,
+        default_computer_pod_setting_id: str | None = None,
+        default_cloud_storage_paths: list[str] | None = None,
+        default_cloud_storage_write_enabled: bool | None = None,
         available_workflow_ids: list[str] | None = None,
         available_template_ids: list[str] | None = None,
+        available_mcp_tool_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
         is_official: bool | None = None,
@@ -1340,38 +1434,34 @@ class TaskAgentAsyncMixin:
         """Async update agent configuration"""
         payload = {"agent_id": agent_id}
 
-        if name is not None:
-            payload["name"] = name
-        if avatar is not None:
-            payload["avatar"] = avatar
-        if description is not None:
-            payload["description"] = description
-        if system_prompt is not None:
-            payload["system_prompt"] = system_prompt
-        if default_model_name is not None:
-            payload["default_model_name"] = default_model_name
-        if default_backend_type is not None:
-            payload["default_backend_type"] = default_backend_type
-        if default_max_cycles is not None:
-            payload["default_max_cycles"] = default_max_cycles
-        if default_allow_interruption is not None:
-            payload["default_allow_interruption"] = default_allow_interruption
-        if default_use_workspace is not None:
-            payload["default_use_workspace"] = default_use_workspace
-        if default_compress_memory_after_characters is not None:
-            payload["default_compress_memory_after_characters"] = default_compress_memory_after_characters
-        if available_workflow_ids is not None:
-            payload["available_workflow_ids"] = available_workflow_ids
-        if available_template_ids is not None:
-            payload["available_template_ids"] = available_template_ids
-        if shared is not None:
-            payload["shared"] = shared
-        if is_public is not None:
-            payload["is_public"] = is_public
-        if is_official is not None:
-            payload["is_official"] = is_official
-        if official_order is not None:
-            payload["official_order"] = official_order
+        _set_if_not_none(payload, "name", name)
+        _set_if_not_none(payload, "avatar", avatar)
+        _set_if_not_none(payload, "description", description)
+        _set_if_not_none(payload, "system_prompt", system_prompt)
+        _set_if_not_none(payload, "usage_hint", usage_hint)
+        _set_if_not_none(payload, "default_model_name", default_model_name)
+        _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_max_cycles", default_max_cycles)
+        _set_if_not_none(payload, "default_allow_interruption", default_allow_interruption)
+        _set_if_not_none(payload, "default_use_workspace", default_use_workspace)
+        _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
+        _set_if_not_none(payload, "default_compress_memory_after_tokens", default_compress_memory_after_tokens)
+        _set_if_not_none(payload, "default_agent_type", default_agent_type)
+        _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
+        _set_if_not_none(payload, "default_sub_agent_ids", default_sub_agent_ids)
+        _set_if_not_none(payload, "required_skills", required_skills)
+        _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
+        _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
+        _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
+        _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
+        _set_if_not_none(payload, "available_template_ids", available_template_ids)
+        _set_if_not_none(payload, "available_mcp_tool_ids", available_mcp_tool_ids)
+        _set_if_not_none(payload, "tag_ids", tag_ids)
+        _set_if_not_none(payload, "shared", shared)
+        _set_if_not_none(payload, "is_public", is_public)
+        _set_if_not_none(payload, "is_official", is_official)
+        _set_if_not_none(payload, "official_order", official_order)
 
         response = await self._request("POST", "task-agent/agent/update", json=payload)
         return _create_agent_from_response(response["data"])

@@ -309,14 +309,17 @@ summary = format_workflow_analysis_for_llm(result, max_length=200)
 ### 创建并运行智能体任务
 
 ```python
-from vectorvein.api import VectorVeinClient, TaskInfo
+from vectorvein.api import AgentDefinition, AgentSettings, TaskInfo, VectorVeinClient
 
 with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     # 创建智能体
     agent = client.create_agent(
         name="研究助手",
         system_prompt="你是一个专业的研究助手。",
-        default_model_name="gpt-4",
+        default_model_name="gpt-5.4",
+        default_load_user_memory=True,
+        default_compress_memory_after_tokens=64000,
+        default_cloud_storage_paths=["/documents/reports"],
     )
 
     # 运行任务
@@ -333,6 +336,28 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     cycles = client.list_agent_cycles(task_id=task.task_id)
     for cycle in cycles.cycles:
         print(f"周期 {cycle.cycle_index}: {cycle.title}")
+```
+
+### 智能体 Schema 说明
+
+```python
+# 自定义 agent_definition / agent_settings 时，请直接使用 backend ai_agents 当前字段名。
+# SDK 只接受 *_after_tokens，已移除旧的 *_after_characters。
+definition = AgentDefinition(
+    model_name="glm-5.1",
+    backend_type="zhipuai",
+    compress_memory_after_tokens=64000,
+    agent_type="computer",
+    workspace_files=[],
+    sub_agent_ids=[],
+)
+
+settings = AgentSettings(
+    model_name="glm-5.1",
+    backend_type="zhipuai",
+    compress_memory_after_tokens=96000,
+    agent_type="tool",
+)
 ```
 
 ### 任务控制

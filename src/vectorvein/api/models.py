@@ -1,6 +1,6 @@
 """VectorVein API data model definitions"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -164,13 +164,22 @@ class TaskInfo:
 class AgentDefinition:
     """Agent definition"""
 
-    system_prompt: str
     model_name: str
     backend_type: str
-    allow_interruption: bool
-    use_workspace: bool
-    compress_memory_after_characters: int
-    tools: list[dict[str, Any]]
+    system_prompt: str = "You are a helpful assistant."
+    allow_interruption: bool = True
+    use_workspace: bool = True
+    compress_memory_after_tokens: int | None = None
+    tools: list[dict[str, Any]] = field(default_factory=list)
+    agent_type: str | None = None
+    workspace_files: list[dict[str, Any]] = field(default_factory=list)
+    sub_agent_ids: list[str] = field(default_factory=list)
+    computer_pod_setting_id: str | None = None
+    output_verifier: str | None = None
+    active_skills: list[str] | None = None
+    bound_skills: list[dict[str, str]] | None = None
+    required_skills_status: dict[str, Any] | None = None
+    enable_workflow_design_tools: bool | None = None
 
 
 @dataclass
@@ -181,7 +190,9 @@ class AgentSettings:
     backend_type: str | None = None
     use_workspace: bool | None = None
     allow_interruption: bool | None = None
-    compress_memory_after_characters: int | None = None
+    compress_memory_after_tokens: int | None = None
+    agent_type: str | None = None
+    computer_pod_setting_id: str | None = None
 
 
 @dataclass
@@ -207,7 +218,8 @@ class Agent:
     default_max_cycles: int
     default_allow_interruption: bool
     default_use_workspace: bool
-    default_compress_memory_after_characters: int
+    default_load_user_memory: bool | None
+    default_compress_memory_after_tokens: int
     shared: bool
     is_public: bool
     used_count: int
@@ -221,11 +233,19 @@ class Agent:
     avatar_display: str | None = None
     usage_hint: dict[str, Any] | None = None
     default_agent_type: str | None = None
-    default_workspace_files: list[str] | None = None
+    default_workspace_files: list[dict[str, Any]] | None = None
     default_sub_agent_ids: list[str] | None = None
-    tags: list[str] | None = None
-    available_workflows: list[str] | None = None
-    available_workflow_templates: list[str] | None = None
+    required_skills: list[dict[str, Any]] | None = None
+    required_skills_count: int | None = None
+    default_output_verifier: str | None = None
+    default_computer_pod_setting_id: str | None = None
+    default_cloud_storage_paths: list[str] | None = None
+    default_cloud_storage_write_enabled: bool | None = None
+    tags: list[dict[str, Any]] | None = None
+    available_workflows: list[dict[str, Any]] | None = None
+    available_workflow_templates: list[dict[str, Any]] | None = None
+    available_mcp_tools: list[dict[str, Any]] | None = None
+    is_favorited: bool | None = None
 
 
 @dataclass
