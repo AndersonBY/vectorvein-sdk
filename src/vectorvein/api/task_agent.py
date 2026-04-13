@@ -183,8 +183,6 @@ class TaskAgentSyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
-        is_official: bool = False,
-        official_order: int = 0,
     ) -> Agent:
         """Create agent configuration
 
@@ -215,8 +213,6 @@ class TaskAgentSyncMixin:
             tag_ids: Agent tag IDs
             shared: Whether shared
             is_public: Whether public
-            is_official: Whether official
-            official_order: Official order
 
         Returns:
             Agent: Created agent configuration
@@ -233,8 +229,6 @@ class TaskAgentSyncMixin:
             "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
-            "is_official": is_official,
-            "official_order": official_order,
         }
 
         _set_if_not_none(payload, "avatar", avatar)
@@ -330,8 +324,6 @@ class TaskAgentSyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
-        is_official: bool | None = None,
-        official_order: int | None = None,
     ) -> Agent:
         """Update agent configuration
 
@@ -363,8 +355,6 @@ class TaskAgentSyncMixin:
             tag_ids: Agent tag IDs
             shared: Whether shared
             is_public: Whether public
-            is_official: Whether official
-            official_order: Official order
 
         Returns:
             Agent: Updated agent configuration
@@ -400,8 +390,6 @@ class TaskAgentSyncMixin:
         _set_if_not_none(payload, "tag_ids", tag_ids)
         _set_if_not_none(payload, "shared", shared)
         _set_if_not_none(payload, "is_public", is_public)
-        _set_if_not_none(payload, "is_official", is_official)
-        _set_if_not_none(payload, "official_order", official_order)
 
         response = self._request("POST", "task-agent/agent/update", json=payload)
         return _create_agent_from_response(response["data"])
@@ -1340,8 +1328,6 @@ class TaskAgentAsyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
-        is_official: bool = False,
-        official_order: int = 0,
     ) -> Agent:
         """Async create agent configuration"""
         payload = {
@@ -1353,8 +1339,6 @@ class TaskAgentAsyncMixin:
             "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
-            "is_official": is_official,
-            "official_order": official_order,
         }
 
         _set_if_not_none(payload, "avatar", avatar)
@@ -1428,8 +1412,6 @@ class TaskAgentAsyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
-        is_official: bool | None = None,
-        official_order: int | None = None,
     ) -> Agent:
         """Async update agent configuration"""
         payload = {"agent_id": agent_id}
@@ -1460,8 +1442,6 @@ class TaskAgentAsyncMixin:
         _set_if_not_none(payload, "tag_ids", tag_ids)
         _set_if_not_none(payload, "shared", shared)
         _set_if_not_none(payload, "is_public", is_public)
-        _set_if_not_none(payload, "is_official", is_official)
-        _set_if_not_none(payload, "official_order", official_order)
 
         response = await self._request("POST", "task-agent/agent/update", json=payload)
         return _create_agent_from_response(response["data"])

@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import sys
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,18 @@ def test_create_agent_from_response_uses_token_threshold_schema():
     assert agent.is_favorited is True
 
 
+def test_agent_write_method_signatures_exclude_official_only_fields():
+    for method in (
+        TaskAgentSyncMixin.create_agent,
+        TaskAgentSyncMixin.update_agent,
+        TaskAgentAsyncMixin.create_agent,
+        TaskAgentAsyncMixin.update_agent,
+    ):
+        signature = inspect.signature(method)
+        assert "is_official" not in signature.parameters
+        assert "official_order" not in signature.parameters
+
+
 def test_sync_create_agent_sends_latest_agent_schema_fields():
     client = _SyncRecorder()
 
@@ -122,6 +135,8 @@ def test_sync_create_agent_sends_latest_agent_schema_fields():
     assert payload["default_cloud_storage_write_enabled"] is True
     assert payload["available_mcp_tool_ids"] == ["tool_1"]
     assert payload["tag_ids"] == ["tag_1"]
+    assert "is_official" not in payload
+    assert "official_order" not in payload
 
 
 def test_sync_update_agent_sends_latest_agent_schema_fields():
@@ -161,6 +176,8 @@ def test_sync_update_agent_sends_latest_agent_schema_fields():
     assert payload["default_cloud_storage_write_enabled"] is False
     assert payload["available_mcp_tool_ids"] == ["tool_2"]
     assert payload["tag_ids"] == ["tag_2"]
+    assert "is_official" not in payload
+    assert "official_order" not in payload
 
 
 def test_async_create_agent_sends_latest_agent_schema_fields():
@@ -182,6 +199,8 @@ def test_async_create_agent_sends_latest_agent_schema_fields():
         assert payload["default_load_user_memory"] is True
         assert payload["default_agent_type"] == "computer"
         assert payload["available_mcp_tool_ids"] == ["tool_1"]
+        assert "is_official" not in payload
+        assert "official_order" not in payload
 
     asyncio.run(_run())
 
