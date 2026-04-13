@@ -22,6 +22,17 @@ from vectorvein.cli._output import CLIUsageError
 
 ENV_API_KEY = "VECTORVEIN_API_KEY"
 ENV_BASE_URL = "VECTORVEIN_BASE_URL"
+_AGENT_DEFINITION_EXAMPLE = '{"model_name":"gpt-4o","backend_type":"openai","compress_memory_after_tokens":64000}'
+_AGENT_SETTINGS_EXAMPLE = '{"model_name":"gpt-4o","backend_type":"openai","compress_memory_after_tokens":64000}'
+
+
+def _parse_bool_text(value: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"true", "1", "yes", "y", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError("expected a boolean value: true or false")
 
 
 def _load_json_value(raw: str, option_name: str) -> Any:
@@ -54,6 +65,18 @@ def _load_json_array(raw: str, option_name: str) -> list[Any]:
     if not isinstance(value, list):
         raise CLIUsageError(f"{option_name} must be a JSON array")
     return value
+
+
+def _load_optional_json_object(raw: str | None, option_name: str) -> dict[str, Any] | None:
+    if not raw:
+        return None
+    return _load_json_object(raw, option_name)
+
+
+def _load_optional_json_array(raw: str | None, option_name: str) -> list[Any] | None:
+    if not raw:
+        return None
+    return _load_json_array(raw, option_name)
 
 
 def _require_api_key(args: argparse.Namespace) -> str:
@@ -221,20 +244,42 @@ def _load_optional_agent_definition(raw: str | None) -> AgentDefinition | None:
     if not raw:
         return None
     payload = _load_json_object(raw, "--agent-definition")
+    if "compress_memory_after_characters" in payload:
+        raise CLIUsageError(
+            "--agent-definition does not match AgentDefinition schema: compress_memory_after_characters is no longer supported.",
+            hint="Use the token-based memory threshold field instead.",
+            suggestions=["Rename compress_memory_after_characters -> compress_memory_after_tokens."],
+            example=_AGENT_DEFINITION_EXAMPLE,
+        )
     try:
         return AgentDefinition(**payload)
     except TypeError as exc:
-        raise CLIUsageError(f"--agent-definition does not match AgentDefinition schema: {exc}") from exc
+        raise CLIUsageError(
+            f"--agent-definition does not match AgentDefinition schema: {exc}",
+            hint="Use the latest AgentDefinition fields and JSON object shape.",
+            example=_AGENT_DEFINITION_EXAMPLE,
+        ) from exc
 
 
 def _load_optional_agent_settings(raw: str | None) -> AgentSettings | None:
     if not raw:
         return None
     payload = _load_json_object(raw, "--agent-settings")
+    if "compress_memory_after_characters" in payload:
+        raise CLIUsageError(
+            "--agent-settings does not match AgentSettings schema: compress_memory_after_characters is no longer supported.",
+            hint="Use the token-based memory threshold field instead.",
+            suggestions=["Rename compress_memory_after_characters -> compress_memory_after_tokens."],
+            example=_AGENT_SETTINGS_EXAMPLE,
+        )
     try:
         return AgentSettings(**payload)
     except TypeError as exc:
-        raise CLIUsageError(f"--agent-settings does not match AgentSettings schema: {exc}") from exc
+        raise CLIUsageError(
+            f"--agent-settings does not match AgentSettings schema: {exc}",
+            hint="Use the latest AgentSettings fields and JSON object shape.",
+            example=_AGENT_SETTINGS_EXAMPLE,
+        ) from exc
 
 
 _TASK_TERMINAL_STATUSES = {"completed", "failed", "error"}

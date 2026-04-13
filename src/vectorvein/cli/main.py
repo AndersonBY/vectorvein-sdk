@@ -129,7 +129,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             command=command,
             error_type="usage_error",
             message=str(exc),
-            hint="Run `vectorvein --help` or `<command> --help` to inspect required arguments.",
+            hint=exc.hint or "Run `vectorvein --help` or `<command> --help` to inspect required arguments.",
+            suggestions=exc.suggestions or None,
+            expected_command=exc.expected_command,
+            example=exc.example,
             details=details,
         )
         if json_output:

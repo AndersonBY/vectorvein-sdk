@@ -48,8 +48,10 @@ uv tool install vectorvein-sdk
 ### CLI 设计目标（对 Agent 友好）
 
 - **帮助信息可自解释**：各模块与子命令都提供详细 `--help` 与示例。
+- **严格层级结构**：例如 task-agent 始终使用 `vectorvein task-agent agent create` 这种明确路径。
 - **默认人类可读**：终端默认输出可读文本，更符合常规 CLI 使用习惯。
 - **按需结构化输出**：需要给 Agent 稳定解析时使用 `--format json`。
+- **错误信息可修复**：输错层级或参数时，会明确指出问题并给出推荐修正命令。
 - **鉴权优先级明确**：API Key 解析顺序为 `--api-key` > `VECTORVEIN_API_KEY`。
 - **退出码固定**：
   - `0`：成功
@@ -100,23 +102,65 @@ vectorvein file upload --path ./a.pdf --path ./b.pdf
 vectorvein task-agent agent list --page 1 --page-size 10
 vectorvein task-agent agent get --agent-id agent_xxx
 vectorvein task-agent agent create --name '我的助手' --system-prompt '你是一个有用的助手'
+vectorvein task-agent agent create \
+  --name '研究助手' \
+  --model-name gpt-4o \
+  --backend-type openai \
+  --default-compress-memory-after-tokens 64000 \
+  --default-load-user-memory true \
+  --available-mcp-tool-ids '["tool_1"]'
 vectorvein task-agent agent update --agent-id agent_xxx --name '新名称'
 vectorvein task-agent agent delete --agent-id agent_xxx
 vectorvein task-agent agent search --query '翻译'
+vectorvein task-agent agent public-list --official true
+vectorvein task-agent agent favorite-list --tag-ids '["tag_1"]'
+vectorvein task-agent agent duplicate --agent-id agent_xxx --add-templates true
+vectorvein task-agent agent toggle-favorite --agent-id agent_xxx --is-favorited true
 
 # Task Agent — 任务管理
 vectorvein task-agent task create --agent-id agent_xxx --text "请总结这篇文章"
 vectorvein task-agent task create --agent-id agent_xxx --text "执行任务" --wait --timeout 120
+vectorvein task-agent task create \
+  --text "分析这份报告" \
+  --agent-definition @agent_definition.json \
+  --agent-settings @agent_settings.json
 vectorvein task-agent task continue --task-id task_xxx --message "再给一个 TL;DR" --wait
 vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "好的，继续"
 vectorvein task-agent task get --task-id task_xxx
 vectorvein task-agent task list --status running --agent-id agent_xxx
 vectorvein task-agent task search --query '总结'
 vectorvein task-agent task delete --task-id task_xxx
+vectorvein task-agent task update-share --task-id task_xxx --shared true --shared-meta @share_meta.json
+vectorvein task-agent task public-shared-list --search research
+vectorvein task-agent task batch-delete --task-ids '["task_1","task_2"]'
+vectorvein task-agent task prompt-optimizer-config
 
 # Task Agent — 执行周期
 vectorvein task-agent cycle list --task-id task_xxx
 vectorvein task-agent cycle get --cycle-id cycle_xxx
+vectorvein task-agent cycle run-workflow --cycle-id cycle_xxx --tool-name search --workflow-inputs @workflow_inputs.json
+vectorvein task-agent cycle replay --task-id task_xxx --start-index 0 --end-index 3
+
+# Task Agent — 标签 / 合集
+vectorvein task-agent tag create --title Office --color '#3366ff'
+vectorvein task-agent tag list --public-only true
+vectorvein task-agent collection create --title '文档助手合集' --description '知识型助手' --data @collection.json
+vectorvein task-agent collection add-agent --collection-id collection_xxx --agent-id agent_xxx
+
+# Task Agent — MCP / 记忆 / 技能
+vectorvein task-agent mcp-server test-connection --data @mcp_server.json
+vectorvein task-agent mcp-tool list --server-id server_xxx
+vectorvein task-agent user-memory create --content '记住我偏好 markdown。'
+vectorvein task-agent user-memory batch-toggle --memory-ids '["memory_1"]' --is-active true
+vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto
+vectorvein task-agent skill upload-and-parse --path ./demo.skill --filename demo.skill
+vectorvein task-agent skill-review create --skill-id skill_xxx --rating 5 --comment '很好用'
+
+# Task Agent — 工作流工具 / 调度 / 分类
+vectorvein task-agent task-category list
+vectorvein task-agent tool-category list
+vectorvein task-agent workflow-tool batch-create --workflow-wids '["wf_1"]' --template-tids '["tpl_1"]' --category-id cat_xxx
+vectorvein task-agent task-schedule update --cron-expression '0 0 * * *' --agent-id agent_xxx --task-info @task_info.json
 
 # 智能体工作空间
 vectorvein agent-workspace list
@@ -141,6 +185,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 - 也支持 `@file.json` 形式，例如：`--input-fields @inputs.json`。
 - `workflow run` 的输入字段对象必须包含：`node_id`、`field_name`、`value`。
 - `workflow run --upload-to` 的格式为：`node_id:field_name:local_file_path`（多文件可重复传该参数）。
+- task-agent 的 `--agent-definition` / `--agent-settings` 必须使用 `compress_memory_after_tokens`；旧的字符阈值字段会被明确拒绝并提示如何修改。
 
 ## 功能概览
 

@@ -48,8 +48,10 @@ uv tool install vectorvein-sdk
 ### CLI Design (Agent-Friendly)
 
 - **Self-descriptive help**: every module and subcommand has detailed `--help` text and examples.
+- **Strict hierarchy**: task-agent commands stay explicit, for example `vectorvein task-agent agent create`.
 - **Human-readable by default**: standard text output for normal terminal usage.
 - **Machine mode on demand**: use `--format json` when an Agent needs structured output.
+- **Repairable usage errors**: invalid command paths explain what is wrong and suggest corrected commands.
 - **Predictable auth**: API key resolution order is `--api-key` > `VECTORVEIN_API_KEY`.
 - **Stable exit codes**:
   - `0`: success
@@ -100,23 +102,65 @@ vectorvein file upload --path ./a.pdf --path ./b.pdf
 vectorvein task-agent agent list --page 1 --page-size 10
 vectorvein task-agent agent get --agent-id agent_xxx
 vectorvein task-agent agent create --name 'My Bot' --system-prompt 'Be helpful'
+vectorvein task-agent agent create \
+  --name 'Research Assistant' \
+  --model-name gpt-4o \
+  --backend-type openai \
+  --default-compress-memory-after-tokens 64000 \
+  --default-load-user-memory true \
+  --available-mcp-tool-ids '["tool_1"]'
 vectorvein task-agent agent update --agent-id agent_xxx --name 'New Name'
 vectorvein task-agent agent delete --agent-id agent_xxx
 vectorvein task-agent agent search --query 'translator'
+vectorvein task-agent agent public-list --official true
+vectorvein task-agent agent favorite-list --tag-ids '["tag_1"]'
+vectorvein task-agent agent duplicate --agent-id agent_xxx --add-templates true
+vectorvein task-agent agent toggle-favorite --agent-id agent_xxx --is-favorited true
 
 # Task Agent — tasks
 vectorvein task-agent task create --agent-id agent_xxx --text "Summarize this article"
 vectorvein task-agent task create --agent-id agent_xxx --text "Do it" --wait --timeout 120
+vectorvein task-agent task create \
+  --text "Analyze the report" \
+  --agent-definition @agent_definition.json \
+  --agent-settings @agent_settings.json
 vectorvein task-agent task continue --task-id task_xxx --message "Also provide a TL;DR" --wait
 vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "Yes, proceed"
 vectorvein task-agent task get --task-id task_xxx
 vectorvein task-agent task list --status running --agent-id agent_xxx
 vectorvein task-agent task search --query 'summary'
 vectorvein task-agent task delete --task-id task_xxx
+vectorvein task-agent task update-share --task-id task_xxx --shared true --shared-meta @share_meta.json
+vectorvein task-agent task public-shared-list --search research
+vectorvein task-agent task batch-delete --task-ids '["task_1","task_2"]'
+vectorvein task-agent task prompt-optimizer-config
 
 # Task Agent — cycles
 vectorvein task-agent cycle list --task-id task_xxx
 vectorvein task-agent cycle get --cycle-id cycle_xxx
+vectorvein task-agent cycle run-workflow --cycle-id cycle_xxx --tool-name search --workflow-inputs @workflow_inputs.json
+vectorvein task-agent cycle replay --task-id task_xxx --start-index 0 --end-index 3
+
+# Task Agent — tags / collections
+vectorvein task-agent tag create --title Office --color '#3366ff'
+vectorvein task-agent tag list --public-only true
+vectorvein task-agent collection create --title 'Docs Agents' --description 'Knowledge assistants' --data @collection.json
+vectorvein task-agent collection add-agent --collection-id collection_xxx --agent-id agent_xxx
+
+# Task Agent — MCP / memory / skills
+vectorvein task-agent mcp-server test-connection --data @mcp_server.json
+vectorvein task-agent mcp-tool list --server-id server_xxx
+vectorvein task-agent user-memory create --content 'Remember I prefer markdown.'
+vectorvein task-agent user-memory batch-toggle --memory-ids '["memory_1"]' --is-active true
+vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto
+vectorvein task-agent skill upload-and-parse --path ./demo.skill --filename demo.skill
+vectorvein task-agent skill-review create --skill-id skill_xxx --rating 5 --comment 'Great skill'
+
+# Task Agent — workflow tools / schedules / categories
+vectorvein task-agent task-category list
+vectorvein task-agent tool-category list
+vectorvein task-agent workflow-tool batch-create --workflow-wids '["wf_1"]' --template-tids '["tpl_1"]' --category-id cat_xxx
+vectorvein task-agent task-schedule update --cron-expression '0 0 * * *' --agent-id agent_xxx --task-info @task_info.json
 
 # Agent Workspace
 vectorvein agent-workspace list
@@ -141,6 +185,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 - You can also pass `@file.json`, for example: `--input-fields @inputs.json`.
 - For `workflow run`, input field objects must include: `node_id`, `field_name`, `value`.
 - `workflow run --upload-to` format: `node_id:field_name:local_file_path` (repeat this option for multiple files).
+- Task-agent `--agent-definition` / `--agent-settings` must use `compress_memory_after_tokens`; legacy character-threshold fields are rejected with fix suggestions.
 
 ## Features
 

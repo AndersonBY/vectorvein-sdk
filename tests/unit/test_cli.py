@@ -481,11 +481,23 @@ def test_cli_task_agent_task_respond(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(respond_to_agent_task=respond_to_agent_task)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "task", "respond",
-        "--task-id", "t_1", "--tool-call-id", "tc_1", "--response", "Yes",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "respond",
+            "--task-id",
+            "t_1",
+            "--tool-call-id",
+            "tc_1",
+            "--response",
+            "Yes",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -505,10 +517,19 @@ def test_cli_task_agent_task_delete(monkeypatch: pytest.MonkeyPatch, capsys: pyt
     FakeClient = _make_fake_client(delete_agent_task=delete_agent_task)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "task", "delete", "--task-id", "t_del",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "delete",
+            "--task-id",
+            "t_del",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -528,10 +549,19 @@ def test_cli_task_agent_task_search(monkeypatch: pytest.MonkeyPatch, capsys: pyt
     FakeClient = _make_fake_client(list_agent_tasks=list_agent_tasks)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "task", "search", "--query", "hello",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "search",
+            "--query",
+            "hello",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -549,10 +579,19 @@ def test_cli_task_agent_cycle_list(monkeypatch: pytest.MonkeyPatch, capsys: pyte
     FakeClient = _make_fake_client(list_agent_cycles=list_agent_cycles)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "cycle", "list", "--task-id", "t_1",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "cycle",
+            "list",
+            "--task-id",
+            "t_1",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -570,10 +609,19 @@ def test_cli_task_agent_cycle_get(monkeypatch: pytest.MonkeyPatch, capsys: pytes
     FakeClient = _make_fake_client(get_agent_cycle=get_agent_cycle)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "cycle", "get", "--cycle-id", "c_1",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "cycle",
+            "get",
+            "--cycle-id",
+            "c_1",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -591,10 +639,21 @@ def test_cli_task_agent_agent_create(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(create_agent=create_agent)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "agent", "create", "--name", "TestBot", "--system-prompt", "Be helpful",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "agent",
+            "create",
+            "--name",
+            "TestBot",
+            "--system-prompt",
+            "Be helpful",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -613,10 +672,21 @@ def test_cli_task_agent_agent_update(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(update_agent=update_agent)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "agent", "update", "--agent-id", "a_1", "--name", "NewName",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "agent",
+            "update",
+            "--agent-id",
+            "a_1",
+            "--name",
+            "NewName",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -634,10 +704,19 @@ def test_cli_task_agent_agent_delete(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(delete_agent=delete_agent)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "agent", "delete", "--agent-id", "a_del",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "agent",
+            "delete",
+            "--agent-id",
+            "a_del",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -656,10 +735,19 @@ def test_cli_task_agent_agent_search(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(list_agents=list_agents)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "agent", "search", "--query", "translator",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "agent",
+            "search",
+            "--query",
+            "translator",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -677,10 +765,20 @@ def test_cli_workflow_create(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     FakeClient = _make_fake_client(create_workflow=create_workflow)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "create", "--title", "My Flow", "--source-wid", "wf_src",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "create",
+            "--title",
+            "My Flow",
+            "--source-wid",
+            "wf_src",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -699,10 +797,18 @@ def test_cli_workflow_delete(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     FakeClient = _make_fake_client(delete_workflow=delete_workflow)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "delete", "--wid", "wf_del",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "delete",
+            "--wid",
+            "wf_del",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -720,10 +826,18 @@ def test_cli_workflow_search(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     FakeClient = _make_fake_client(list_workflows=list_workflows)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "search", "--query", "translation",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "search",
+            "--query",
+            "translation",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -746,10 +860,22 @@ def test_cli_task_create_with_wait(monkeypatch: pytest.MonkeyPatch, capsys: pyte
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
     monkeypatch.setattr("vectorvein.cli._parsers.time.sleep", lambda _: None)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "task", "create", "--text", "do it", "--wait", "--timeout", "60",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "create",
+            "--text",
+            "do it",
+            "--wait",
+            "--timeout",
+            "60",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -767,10 +893,21 @@ def test_cli_workflow_run_record_list(monkeypatch: pytest.MonkeyPatch, capsys: p
     FakeClient = _make_fake_client(list_workflow_run_records=list_workflow_run_records)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "run-record", "list", "--wid", "wf_1", "--status", "FINISHED",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "run-record",
+            "list",
+            "--wid",
+            "wf_1",
+            "--status",
+            "FINISHED",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -789,10 +926,19 @@ def test_cli_workflow_run_record_get(monkeypatch: pytest.MonkeyPatch, capsys: py
     FakeClient = _make_fake_client(get_workflow_run_record=get_workflow_run_record)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "run-record", "get", "--rid", "rid_123",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "run-record",
+            "get",
+            "--rid",
+            "rid_123",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -811,10 +957,19 @@ def test_cli_workflow_run_record_stop(monkeypatch: pytest.MonkeyPatch, capsys: p
     FakeClient = _make_fake_client(stop_workflow_run_record=stop_workflow_run_record)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "run-record", "stop", "--rid", "rid_running",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "run-record",
+            "stop",
+            "--rid",
+            "rid_running",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -828,42 +983,44 @@ def test_cli_workflow_describe(monkeypatch: pytest.MonkeyPatch, capsys: pytest.C
         wid: str = "wf_desc"
         title: str = "Translation Flow"
         brief: str = "Translate text"
-        data: dict = field(default_factory=lambda: {
-            "nodes": [
-                {
-                    "id": "node_1",
-                    "data": {
-                        "template": {
-                            "input_text": {
-                                "display_name": "Input Text",
-                                "field_type": "text",
-                                "required": True,
-                                "show": True,
-                                "is_output": False,
-                                "value": "",
-                            },
-                            "target_lang": {
-                                "display_name": "Target Language",
-                                "field_type": "select",
-                                "required": True,
-                                "show": True,
-                                "is_output": False,
-                                "value": "en",
-                                "options": [{"label": "English", "value": "en"}, {"label": "Chinese", "value": "zh"}],
-                            },
-                            "output": {
-                                "display_name": "Output",
-                                "field_type": "text",
-                                "is_output": True,
-                                "show": True,
-                                "value": "",
-                            },
-                        }
-                    },
-                }
-            ],
-            "edges": [],
-        })
+        data: dict = field(
+            default_factory=lambda: {
+                "nodes": [
+                    {
+                        "id": "node_1",
+                        "data": {
+                            "template": {
+                                "input_text": {
+                                    "display_name": "Input Text",
+                                    "field_type": "text",
+                                    "required": True,
+                                    "show": True,
+                                    "is_output": False,
+                                    "value": "",
+                                },
+                                "target_lang": {
+                                    "display_name": "Target Language",
+                                    "field_type": "select",
+                                    "required": True,
+                                    "show": True,
+                                    "is_output": False,
+                                    "value": "en",
+                                    "options": [{"label": "English", "value": "en"}, {"label": "Chinese", "value": "zh"}],
+                                },
+                                "output": {
+                                    "display_name": "Output",
+                                    "field_type": "text",
+                                    "is_output": True,
+                                    "show": True,
+                                    "value": "",
+                                },
+                            }
+                        },
+                    }
+                ],
+                "edges": [],
+            }
+        )
 
     def get_workflow(self, wid: str):
         return FakeWorkflowFull(wid=wid)
@@ -871,10 +1028,18 @@ def test_cli_workflow_describe(monkeypatch: pytest.MonkeyPatch, capsys: pytest.C
     FakeClient = _make_fake_client(get_workflow=get_workflow)
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "workflow", "describe", "--wid", "wf_desc",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "describe",
+            "--wid",
+            "wf_desc",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0
@@ -905,11 +1070,24 @@ def test_cli_task_continue_with_wait(monkeypatch: pytest.MonkeyPatch, capsys: py
     monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
     monkeypatch.setattr("vectorvein.cli._parsers.time.sleep", lambda _: None)
 
-    exit_code = cli_main([
-        "--format", "json", "--api-key", "k",
-        "task-agent", "task", "continue",
-        "--task-id", "t_1", "--message", "go on", "--wait", "--timeout", "60",
-    ])
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "continue",
+            "--task-id",
+            "t_1",
+            "--message",
+            "go on",
+            "--wait",
+            "--timeout",
+            "60",
+        ]
+    )
     stdout, stderr = _read_json_output(capsys)
 
     assert exit_code == 0

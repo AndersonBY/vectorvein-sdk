@@ -9,15 +9,82 @@ from dataclasses import asdict, is_dataclass
 from typing import Any, NoReturn
 
 
+def _repair_usage_message(message: str, prog: str) -> tuple[str, str | None, list[str], str | None, str | None]:
+    normalized_prog = prog.strip()
+
+    if normalized_prog.endswith("task-agent") and "argument task_agent_group: invalid choice:" in message:
+        return (
+            "task-agent requires a subgroup before an action.",
+            "Choose a subgroup such as agent, task, cycle, skill, or collection before the action name.",
+            [
+                "vectorvein task-agent agent create --name 'My Agent'",
+                "vectorvein task-agent task create --agent-id agent_xxx --text 'Do work'",
+                "vectorvein task-agent -h",
+            ],
+            "vectorvein task-agent <group> <action> [options]",
+            "vectorvein task-agent agent create --name 'Research Assistant'",
+        )
+
+    if normalized_prog.endswith("task-agent agent") and "the following arguments are required: task_agent_agent_command" in message:
+        return (
+            "task-agent agent requires an action.",
+            "Pick an action such as list, get, create, update, duplicate, or toggle-favorite.",
+            [
+                "vectorvein task-agent agent list",
+                "vectorvein task-agent agent create --name 'My Agent'",
+                "vectorvein task-agent agent -h",
+            ],
+            "vectorvein task-agent agent <action> [options]",
+            "vectorvein task-agent agent create --name 'Research Assistant'",
+        )
+
+    if normalized_prog.endswith("task-agent task") and "the following arguments are required: task_agent_task_command" in message:
+        return (
+            "task-agent task requires an action.",
+            "Pick an action such as list, get, create, continue, respond, or update-share.",
+            [
+                "vectorvein task-agent task list",
+                "vectorvein task-agent task create --agent-id agent_xxx --text 'Summarize this report'",
+                "vectorvein task-agent task -h",
+            ],
+            "vectorvein task-agent task <action> [options]",
+            "vectorvein task-agent task create --agent-id agent_xxx --text 'Summarize this report'",
+        )
+
+    return message, None, [], None, None
+
+
 class CLIUsageError(ValueError):
     """Raised when CLI usage or argument values are invalid."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        suggestions: list[str] | None = None,
+        expected_command: str | None = None,
+        example: str | None = None,
+    ):
+        super().__init__(message)
+        self.hint = hint
+        self.suggestions = list(suggestions or [])
+        self.expected_command = expected_command
+        self.example = example
 
 
 class CLIArgumentParser(argparse.ArgumentParser):
     """ArgumentParser that raises usage errors instead of exiting."""
 
     def error(self, message: str) -> NoReturn:  # noqa: D401
-        raise CLIUsageError(message)
+        repaired_message, hint, suggestions, expected_command, example = _repair_usage_message(message, self.prog)
+        raise CLIUsageError(
+            repaired_message,
+            hint=hint,
+            suggestions=suggestions,
+            expected_command=expected_command,
+            example=example,
+        )
 
 
 def _normalize(value: Any) -> Any:
@@ -101,6 +168,9 @@ def _print_text_error(payload: dict[str, Any], stream: Any | None = None) -> Non
     message = str(error.get("message", "Unknown error"))
     status_code = error.get("status_code")
     hint = error.get("hint")
+    suggestions = error.get("suggestions") or []
+    expected_command = error.get("expected_command")
+    example = error.get("example")
     details = error.get("details")
 
     if command:
@@ -112,6 +182,14 @@ def _print_text_error(payload: dict[str, Any], stream: Any | None = None) -> Non
         target_stream.write(f"Status Code: {status_code}\n")
     if hint:
         target_stream.write(f"Hint: {hint}\n")
+    if expected_command:
+        target_stream.write(f"Expected Command: {expected_command}\n")
+    if suggestions:
+        target_stream.write("Suggestions:\n")
+        for suggestion in suggestions:
+            target_stream.write(f"  - {suggestion}\n")
+    if example:
+        target_stream.write(f"Example: {example}\n")
     if isinstance(details, dict) and "traceback" in details:
         target_stream.write("\nTraceback:\n")
         target_stream.write(f"{details['traceback']}\n")
@@ -131,6 +209,9 @@ def _error_payload(
     message: str,
     *,
     hint: str | None = None,
+    suggestions: list[str] | None = None,
+    expected_command: str | None = None,
+    example: str | None = None,
     status_code: int | None = None,
     details: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -139,6 +220,12 @@ def _error_payload(
         error["status_code"] = status_code
     if hint:
         error["hint"] = hint
+    if suggestions:
+        error["suggestions"] = suggestions
+    if expected_command:
+        error["expected_command"] = expected_command
+    if example:
+        error["example"] = example
     if details:
         error["details"] = details
 
