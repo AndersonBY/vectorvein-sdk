@@ -787,6 +787,42 @@ def test_cli_workflow_create(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     assert captured["source_workflow_wid"] == "wf_src"
 
 
+def test_cli_workflow_create_reads_brief_from_text_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    brief_file = tmp_path / "workflow_brief.md"
+    brief_file.write_text("Collect invoices, classify them, and produce a downloadable CSV.", encoding="utf-8")
+    captured: dict[str, Any] = {}
+
+    def create_workflow(self, **kwargs: Any):
+        captured.update(kwargs)
+        return FakeWorkflow(wid="wf_new", title=kwargs.get("title", "New workflow"))
+
+    FakeClient = _make_fake_client(create_workflow=create_workflow)
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "workflow",
+            "create",
+            "--title",
+            "My Flow",
+            "--brief",
+            f"@{brief_file}",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured["brief"] == "Collect invoices, classify them, and produce a downloadable CSV."
+
+
 def test_cli_workflow_delete(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
     deleted: list[str] = []
 
@@ -881,6 +917,41 @@ def test_cli_task_create_with_wait(monkeypatch: pytest.MonkeyPatch, capsys: pyte
     assert exit_code == 0
     assert stderr == {}
     assert call_count["n"] >= 2
+
+
+def test_cli_task_create_reads_text_from_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    instructions_file = tmp_path / "task.md"
+    instructions_file.write_text("Summarize the uploaded invoices into CSV.", encoding="utf-8")
+    captured: dict[str, Any] = {}
+
+    def create_agent_task(self, **kwargs: Any):
+        captured.update(kwargs)
+        return FakeAgentTask(task_id="t_file", status="running")
+
+    FakeClient = _make_fake_client(create_agent_task=create_agent_task)
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "task",
+            "create",
+            "--text",
+            f"@{instructions_file}",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured["task_info"].text == "Summarize the uploaded invoices into CSV."
 
 
 def test_cli_workflow_run_record_list(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):

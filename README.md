@@ -183,6 +183,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 
 - Options like `--input-field`, `--attachments`, `--body` accept inline JSON.
 - You can also pass `@file.json`, for example: `--input-fields @inputs.json`.
+- Selected long text options also accept `@file`, for example: `--description @agent-description.md`, `--system-prompt @prompt.md`, `--brief @workflow-brief.md`, `--text @task.md`, `--message @reply.md`, `--content @memory.md`.
 - For `workflow run`, input field objects must include: `node_id`, `field_name`, `value`.
 - `workflow run --upload-to` format: `node_id:field_name:local_file_path` (repeat this option for multiple files).
 - Task-agent `--agent-definition` / `--agent-settings` must use `compress_memory_after_tokens`; legacy character-threshold fields are rejected with fix suggestions.

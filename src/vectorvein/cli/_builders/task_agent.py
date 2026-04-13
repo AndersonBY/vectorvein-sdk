@@ -23,6 +23,8 @@ def _json_object_help(noun: str) -> str:
 
 
 def _add_agent_create_update_arguments(parser: argparse.ArgumentParser, *, include_agent_id: bool) -> None:
+    default_label = "unchanged" if include_agent_id else "backend default"
+
     if include_agent_id:
         basics = parser.add_argument_group("Target Agent")
         basics.add_argument("--agent-id", required=True, help="Agent ID to update.")
@@ -34,17 +36,32 @@ def _add_agent_create_update_arguments(parser: argparse.ArgumentParser, *, inclu
     else:
         basics.add_argument("--name", help="Agent name.")
     basics.add_argument("--avatar", help="Agent avatar URL.")
-    basics.add_argument("--description", help="Agent description.")
-    basics.add_argument("--system-prompt", help="System prompt.")
+    basics.add_argument("--description", help="Agent description or @file.")
+    basics.add_argument("--system-prompt", help="System prompt or @file.")
     basics.add_argument("--usage-hint", help=_json_object_help("agent usage_hint metadata"))
 
     defaults = parser.add_argument_group("Default Runtime")
     defaults.add_argument("--model-name", help="Default model name.")
     defaults.add_argument("--backend-type", help="Default backend type.")
     defaults.add_argument("--max-cycles", type=int, help="Default max cycles.")
-    add_bool_text_argument(defaults, "--default-allow-interruption", help_text="Whether the agent allows interruption by default.")
-    add_bool_text_argument(defaults, "--default-use-workspace", help_text="Whether the agent uses a workspace by default.")
-    add_bool_text_argument(defaults, "--default-load-user-memory", help_text="Whether the agent loads user memory by default.")
+    add_bool_text_argument(
+        defaults,
+        "--default-allow-interruption",
+        help_text="Whether the agent allows interruption by default.",
+        display_default=default_label if include_agent_id else True,
+    )
+    add_bool_text_argument(
+        defaults,
+        "--default-use-workspace",
+        help_text="Whether the agent uses a workspace by default.",
+        display_default=default_label if include_agent_id else True,
+    )
+    add_bool_text_argument(
+        defaults,
+        "--default-load-user-memory",
+        help_text="Whether the agent loads user memory by default.",
+        display_default=default_label,
+    )
     defaults.add_argument("--default-compress-memory-after-tokens", type=int, help="Compress memory threshold in tokens.")
     defaults.add_argument("--default-agent-type", help="Default agent type, for example tool or computer.")
 
@@ -52,22 +69,30 @@ def _add_agent_create_update_arguments(parser: argparse.ArgumentParser, *, inclu
     workspace.add_argument("--default-workspace-files", help=_json_array_help("default workspace file descriptors"))
     workspace.add_argument("--default-sub-agent-ids", help=_json_array_help("default sub-agent IDs"))
     workspace.add_argument("--required-skills", help=_json_array_help("required skill definitions"))
-    workspace.add_argument("--default-output-verifier", help="Default output verifier script.")
+    workspace.add_argument("--default-output-verifier", help="Default output verifier script or @file.")
     workspace.add_argument("--default-computer-pod-setting-id", help="Default computer pod setting ID.")
 
     resources = parser.add_argument_group("Mounted Resources")
     resources.add_argument("--default-cloud-storage-paths", help=_json_array_help("mounted cloud storage paths"))
-    add_bool_text_argument(resources, "--default-cloud-storage-write-enabled", help_text="Whether mounted cloud storage is writable.")
+    add_bool_text_argument(
+        resources,
+        "--default-cloud-storage-write-enabled",
+        help_text="Whether mounted cloud storage is writable.",
+        display_default=default_label,
+    )
     resources.add_argument("--available-workflow-ids", help=_json_array_help("available workflow IDs"))
     resources.add_argument("--available-template-ids", help=_json_array_help("available template IDs"))
     resources.add_argument("--available-mcp-tool-ids", help=_json_array_help("available MCP tool IDs"))
     resources.add_argument("--tag-ids", help=_json_array_help("agent tag IDs"))
 
     sharing = parser.add_argument_group("Visibility")
-    add_bool_text_argument(sharing, "--shared", help_text="Whether the agent is shared.")
-    add_bool_text_argument(sharing, "--is-public", help_text="Whether the agent is publicly visible.")
-    add_bool_text_argument(sharing, "--is-official", help_text="Whether the agent is marked as official.")
-    sharing.add_argument("--official-order", type=int, help="Official ordering priority.")
+    add_bool_text_argument(sharing, "--shared", help_text="Whether the agent is shared.", display_default=default_label if include_agent_id else False)
+    add_bool_text_argument(
+        sharing,
+        "--is-public",
+        help_text="Whether the agent is publicly visible.",
+        display_default=default_label if include_agent_id else False,
+    )
 
 
 def _add_attachment_arguments(parser: argparse.ArgumentParser, *, allow_oss_key: bool) -> None:
@@ -125,7 +150,6 @@ def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
             notes=[
                 "--usage-hint must be a JSON object.",
                 "List-style fields accept inline JSON arrays or @file.",
-                "Use --default-compress-memory-after-tokens; the old *_after_characters field is not supported.",
             ],
         ),
     )
@@ -281,7 +305,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
             ],
         ),
     )
-    task_create.add_argument("--text", required=True, help="Task instruction text.")
+    task_create.add_argument("--text", required=True, help="Task instruction text or @file.")
     task_create.add_argument("--agent-id", help="Saved agent ID to start.")
     task_create.add_argument("--title", help="Optional task title.")
     task_create.add_argument("--max-cycles", type=int, help="Override max cycles.")
@@ -304,7 +328,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
         ),
     )
     task_continue.add_argument("--task-id", required=True, help="Task ID.")
-    task_continue.add_argument("--message", required=True, help="Follow-up message.")
+    task_continue.add_argument("--message", required=True, help="Follow-up message or @file.")
     _add_attachment_arguments(task_continue, allow_oss_key=False)
     task_continue.add_argument("--wait", action="store_true", help="Wait until the task finishes, fails, or asks another question.")
     task_continue.add_argument("--timeout", type=int, default=600, help="Timeout in seconds when --wait is set (default: 600).")
@@ -325,7 +349,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
         ),
     )
     task_resume.add_argument("--task-id", required=True, help="Task ID.")
-    task_resume.add_argument("--message", help="Optional resume message.")
+    task_resume.add_argument("--message", help="Optional resume message or @file.")
     _add_attachment_arguments(task_resume, allow_oss_key=False)
     task_resume.add_argument("--wait", action="store_true", help="Wait until the task finishes, fails, or asks another question.")
     task_resume.add_argument("--timeout", type=int, default=600, help="Timeout in seconds when --wait is set (default: 600).")
@@ -341,7 +365,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
     )
     task_respond.add_argument("--task-id", required=True, help="Task ID.")
     task_respond.add_argument("--tool-call-id", required=True, help="Tool call ID from waiting_question.")
-    task_respond.add_argument("--response", required=True, help="Human response content.")
+    task_respond.add_argument("--response", required=True, help="Human response content or @file.")
     task_respond.add_argument("--wait", action="store_true", help="Wait until the task finishes, fails, or asks another question.")
     task_respond.add_argument("--timeout", type=int, default=600, help="Timeout in seconds when --wait is set (default: 600).")
     task_respond.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_respond, command="task-agent task respond")
@@ -408,7 +432,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
         ),
     )
     task_add_pending.add_argument("--task-id", required=True, help="Task ID.")
-    task_add_pending.add_argument("--message", required=True, help="Pending human message.")
+    task_add_pending.add_argument("--message", required=True, help="Pending human message or @file.")
     task_add_pending.add_argument("--action-type", help="Optional action type label.")
     _add_attachment_arguments(task_add_pending, allow_oss_key=False)
     task_add_pending.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_add_pending_message, command="task-agent task add-pending-message")
@@ -440,7 +464,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
         ),
     )
     task_prompt_opt.add_argument("--task-id", required=True, help="Task ID.")
-    task_prompt_opt.add_argument("--optimization-direction", required=True, help="Prompt optimization goal or direction.")
+    task_prompt_opt.add_argument("--optimization-direction", required=True, help="Prompt optimization goal or direction or @file.")
     task_prompt_opt.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_start_prompt_optimization, command="task-agent task start-prompt-optimization")
 
     task_prompt_config = task_sub.add_parser(
@@ -526,7 +550,7 @@ def _register_cycle_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
         ),
     )
     cycle_finish.add_argument("--cycle-id", required=True, help="Cycle ID.")
-    cycle_finish.add_argument("--message", default="任务已完成", help="Finish message (default: 任务已完成).")
+    cycle_finish.add_argument("--message", default="任务已完成", help="Finish message or @file (default: 任务已完成).")
     cycle_finish.set_defaults(handler=task_agent_cmd._cmd_task_agent_cycle_finish_task, command="task-agent cycle finish-task")
 
     cycle_replay = cycle_sub.add_parser(
@@ -628,7 +652,7 @@ def _register_collection_group(task_agent_sub: argparse._SubParsersAction[argpar
         ),
     )
     collection_create.add_argument("--title", help="Collection title.")
-    collection_create.add_argument("--description", help="Collection description.")
+    collection_create.add_argument("--description", help="Collection description or @file.")
     collection_create.add_argument("--agent-ids", help=_json_array_help("agent IDs"))
     add_bool_text_argument(collection_create, "--shared", help_text="Whether the collection is shared.")
     add_bool_text_argument(collection_create, "--is-public", help_text="Whether the collection is public.")
@@ -660,7 +684,7 @@ def _register_collection_group(task_agent_sub: argparse._SubParsersAction[argpar
     )
     collection_update.add_argument("--collection-id", required=True, help="Collection ID.")
     collection_update.add_argument("--title", help="Collection title.")
-    collection_update.add_argument("--description", help="Collection description.")
+    collection_update.add_argument("--description", help="Collection description or @file.")
     collection_update.add_argument("--agent-ids", help=_json_array_help("agent IDs"))
     add_bool_text_argument(collection_update, "--shared", help_text="Whether the collection is shared.")
     add_bool_text_argument(collection_update, "--is-public", help_text="Whether the collection is public.")
@@ -705,7 +729,7 @@ def _register_mcp_server_group(task_agent_sub: argparse._SubParsersAction[argpar
 
     def _add_mcp_server_payload_args(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--name", help="Server display name.")
-        parser.add_argument("--description", help="Server description.")
+        parser.add_argument("--description", help="Server description or @file.")
         parser.add_argument("--server-url", help="Server URL.")
         parser.add_argument("--transport-type", help="Transport type.")
         parser.add_argument("--headers", help=_json_object_help("HTTP headers"))
@@ -784,7 +808,7 @@ def _register_mcp_tool_group(task_agent_sub: argparse._SubParsersAction[argparse
 
     def _add_mcp_tool_payload_args(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--tool-name", help="Tool name.")
-        parser.add_argument("--description", help="Tool description.")
+        parser.add_argument("--description", help="Tool description or @file.")
         parser.add_argument("--server-id", help="MCP server ID.")
         parser.add_argument("--tool-schema", help=_json_object_help("tool schema"))
         add_json_data_argument(parser)
@@ -838,7 +862,7 @@ def _register_user_memory_group(task_agent_sub: argparse._SubParsersAction[argpa
     memory_sub.required = True
 
     def _add_user_memory_payload_args(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--content", help="Memory content.")
+        parser.add_argument("--content", help="Memory content or @file.")
         parser.add_argument("--memory-type", help="Memory type.")
         parser.add_argument("--metadata", help=_json_object_help("memory metadata"))
         add_bool_text_argument(parser, "--is-active", help_text="Whether the memory is active.")
@@ -934,8 +958,8 @@ def _register_skill_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     def _add_skill_payload_args(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--name", help="Skill name.")
         parser.add_argument("--display-name", help="Skill display name.")
-        parser.add_argument("--description", help="Skill description.")
-        parser.add_argument("--content", help="Skill content.")
+        parser.add_argument("--description", help="Skill description or @file.")
+        parser.add_argument("--content", help="Skill content or @file.")
         parser.add_argument("--category-id", help="Skill category ID.")
         parser.add_argument("--permission-level", help="Permission level.")
         parser.add_argument("--metadata", help=_json_object_help("skill metadata"))
@@ -1088,7 +1112,7 @@ def _register_skill_review_group(task_agent_sub: argparse._SubParsersAction[argp
     )
     review_create.add_argument("--skill-id", required=True, help="Skill ID.")
     review_create.add_argument("--rating", required=True, type=int, help="Rating value.")
-    review_create.add_argument("--comment", help="Review comment.")
+    review_create.add_argument("--comment", help="Review comment or @file.")
     review_create.set_defaults(handler=task_agent_cmd._cmd_task_agent_skill_review_create, command="task-agent skill-review create")
 
     review_delete = review_sub.add_parser(
@@ -1162,7 +1186,7 @@ def _register_workflow_tool_group(task_agent_sub: argparse._SubParsersAction[arg
         cmd.add_argument("--template-tid", help="Template TID.")
         cmd.add_argument("--category-id", help="Category ID.")
         cmd.add_argument("--display-name", help="Display name.")
-        cmd.add_argument("--description", help="Description.")
+        cmd.add_argument("--description", help="Description or @file.")
         add_json_data_argument(cmd)
 
     workflow_tool_create = sub.add_parser(

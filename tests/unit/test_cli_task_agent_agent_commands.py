@@ -33,6 +33,17 @@ def test_agent_create_help_lists_full_schema(capsys: pytest.CaptureFixture[str])
     assert "--required-skills" in out
     assert "--available-mcp-tool-ids" in out
     assert "--tag-ids" in out
+    assert "--is-official" not in out
+    assert "--official-order" not in out
+    assert "Whether the agent allows interruption by default." in out
+    assert "Whether the agent uses a workspace by default." in out
+    assert "Whether the agent loads user memory by default." in out
+    assert "Whether mounted cloud storage is writable." in out
+    assert "Whether the agent is shared." in out
+    assert "Whether the agent is publicly visible." in out
+    assert "Default: true." in out
+    assert "Default: backend default." in out
+    assert "Default: false." in out
     assert "JSON object or @file" in out
     assert "Examples:" in out
 
@@ -118,10 +129,6 @@ def test_cli_agent_create_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
             "true",
             "--is-public",
             "false",
-            "--is-official",
-            "true",
-            "--official-order",
-            "7",
         ]
     )
     stdout, stderr = _read_json_output(capsys)
@@ -156,8 +163,6 @@ def test_cli_agent_create_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
         "tag_ids": ["tag_1"],
         "shared": True,
         "is_public": False,
-        "is_official": True,
-        "official_order": 7,
     }
 
 
@@ -208,8 +213,6 @@ def test_cli_agent_update_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
             "false",
             "--is-public",
             "true",
-            "--is-official",
-            "false",
         ]
     )
     stdout, stderr = _read_json_output(capsys)
@@ -225,4 +228,69 @@ def test_cli_agent_update_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
     assert captured["tag_ids"] == ["tag_2"]
     assert captured["shared"] is False
     assert captured["is_public"] is True
-    assert captured["is_official"] is False
+
+
+def test_cli_agent_create_reads_system_prompt_from_text_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+):
+    prompt_file = tmp_path / "agent_system_prompt.md"
+    prompt_file.write_text("You are a meticulous invoice assistant.", encoding="utf-8")
+    description_file = tmp_path / "agent_description.md"
+    description_file.write_text("Sort uploaded invoices and export clean CSV summaries.", encoding="utf-8")
+    captured: dict[str, Any] = {}
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        def create_agent(self, **kwargs: Any):
+            captured.update(kwargs)
+            return {"agent_id": "agent_1"}
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "test_key",
+            "task-agent",
+            "agent",
+            "create",
+            "--name",
+            "Research Assistant",
+            "--description",
+            f"@{description_file}",
+            "--system-prompt",
+            f"@{prompt_file}",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured["description"] == "Sort uploaded invoices and export clean CSV summaries."
+    assert captured["system_prompt"] == "You are a meticulous invoice assistant."
+
+
+def test_agent_update_help_hides_official_only_fields(capsys: pytest.CaptureFixture[str]):
+    parser = build_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args(["task-agent", "agent", "update", "-h"])
+
+    out = capsys.readouterr().out
+    assert "--is-official" not in out
+    assert "--official-order" not in out
+    assert "Whether the agent is shared." in out
+    assert "Whether the agent is publicly visible." in out
+    assert "Default: unchanged." in out

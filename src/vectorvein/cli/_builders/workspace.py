@@ -89,7 +89,7 @@ def register_workspace_parser(top_level: argparse._SubParsersAction[argparse.Arg
     )
     workspace_write.add_argument("--workspace-id", required=True, help="Workspace ID.")
     workspace_write.add_argument("--file-path", required=True, help="File path in workspace.")
-    workspace_write.add_argument("--content", help="Inline UTF-8 text content.")
+    workspace_write.add_argument("--content", help="Inline UTF-8 text content or @file.")
     workspace_write.add_argument("--content-file", help="Read file content from local UTF-8 file.")
     workspace_write.set_defaults(handler=_cmd_workspace_write, command="agent-workspace write")
 

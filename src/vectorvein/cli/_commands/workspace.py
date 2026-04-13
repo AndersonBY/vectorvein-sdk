@@ -9,6 +9,7 @@ from typing import Any
 from vectorvein.api import VectorVeinClient
 
 from vectorvein.cli._output import CLIUsageError
+from vectorvein.cli._parsers import _load_text_value
 
 
 def _cmd_workspace_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -50,7 +51,7 @@ def _cmd_workspace_write(args: argparse.Namespace, client: VectorVeinClient) -> 
             raise CLIUsageError(f"--content-file must be a file path: {path}")
         content = path.read_text(encoding="utf-8")
     else:
-        content = str(args.content)
+        content = _load_text_value(str(args.content), "--content")
 
     return client.write_workspace_file(
         workspace_id=args.workspace_id,

@@ -8,8 +8,29 @@ from textwrap import dedent
 from vectorvein.cli._parsers import _parse_bool_text
 
 
+def _format_default_value(value: bool | str) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return value
+
+
 class RichHelpFormatter(argparse.RawTextHelpFormatter):
     """Help formatter with raw newlines for curated examples and notes."""
+
+    def _get_help_string(self, action: argparse.Action) -> str | None:
+        help_text = action.help
+        if help_text is argparse.SUPPRESS:
+            return help_text
+        if not isinstance(help_text, str):
+            return help_text
+
+        display_default = getattr(action, "display_default", None)
+        if display_default is None and isinstance(action.default, bool):
+            display_default = _format_default_value(action.default)
+
+        if display_default is not None and "default:" not in help_text.lower():
+            return f"{help_text} Default: {display_default}."
+        return help_text
 
 
 def _section(title: str, lines: list[str]) -> str:
@@ -52,5 +73,7 @@ def add_bool_text_argument(
     *,
     help_text: str,
     dest: str | None = None,
+    display_default: bool | str = "not set",
 ) -> None:
-    parser.add_argument(option, dest=dest, type=_parse_bool_text, metavar="BOOL", help=f"{help_text} Accepted values: true or false.")
+    action = parser.add_argument(option, dest=dest, type=_parse_bool_text, metavar="BOOL", help=f"{help_text} Accepted values: true or false.")
+    action.display_default = _format_default_value(display_default)

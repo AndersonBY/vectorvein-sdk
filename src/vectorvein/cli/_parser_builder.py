@@ -42,7 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto\n"
             "  vectorvein agent-workspace read --workspace-id ws_xxx --file-path notes.txt --start-line 1 --end-line 20\n"
             '  vectorvein api request --method POST --endpoint workflow/list --body \'{"page":1,"page_size":5}\'\n\n'
-            "JSON inputs support @file syntax, for example --input-fields @payload.json.\n\n"
+            "JSON inputs support @file syntax, for example --input-fields @payload.json.\n"
+            "Selected text inputs also support @file syntax, for example --description @desc.md, --system-prompt @prompt.md, or --brief @workflow_brief.md.\n\n"
             "Exit codes:\n"
             "  0 success\n"
             "  1 unexpected error\n"

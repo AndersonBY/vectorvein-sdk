@@ -16,6 +16,8 @@ from vectorvein.cli._parsers import (
     _load_optional_agent_settings,
     _load_optional_json_array,
     _load_optional_json_object,
+    _load_optional_text_value,
+    _load_text_value,
     _poll_task_until_done,
 )
 
@@ -55,8 +57,8 @@ def _cmd_task_agent_agent_get(args: argparse.Namespace, client: VectorVeinClient
 def _cmd_task_agent_agent_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     kwargs: dict[str, Any] = {"name": args.name}
     _set_if_not_none(kwargs, "avatar", args.avatar)
-    _set_if_not_none(kwargs, "description", args.description)
-    _set_if_not_none(kwargs, "system_prompt", args.system_prompt)
+    _set_if_not_none(kwargs, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(kwargs, "system_prompt", _load_optional_text_value(args.system_prompt, "--system-prompt"))
     _set_if_not_none(kwargs, "usage_hint", _load_optional_object(args.usage_hint, "--usage-hint"))
     _set_if_not_none(kwargs, "default_model_name", args.model_name)
     _set_if_not_none(kwargs, "default_backend_type", args.backend_type)
@@ -69,7 +71,7 @@ def _cmd_task_agent_agent_create(args: argparse.Namespace, client: VectorVeinCli
     _set_if_not_none(kwargs, "default_workspace_files", _load_optional_array(args.default_workspace_files, "--default-workspace-files"))
     _set_if_not_none(kwargs, "default_sub_agent_ids", _load_optional_array(args.default_sub_agent_ids, "--default-sub-agent-ids"))
     _set_if_not_none(kwargs, "required_skills", _load_optional_array(args.required_skills, "--required-skills"))
-    _set_if_not_none(kwargs, "default_output_verifier", args.default_output_verifier)
+    _set_if_not_none(kwargs, "default_output_verifier", _load_optional_text_value(args.default_output_verifier, "--default-output-verifier"))
     _set_if_not_none(kwargs, "default_computer_pod_setting_id", args.default_computer_pod_setting_id)
     _set_if_not_none(kwargs, "default_cloud_storage_paths", _load_optional_array(args.default_cloud_storage_paths, "--default-cloud-storage-paths"))
     _set_if_not_none(kwargs, "default_cloud_storage_write_enabled", args.default_cloud_storage_write_enabled)
@@ -79,8 +81,6 @@ def _cmd_task_agent_agent_create(args: argparse.Namespace, client: VectorVeinCli
     _set_if_not_none(kwargs, "tag_ids", _load_optional_array(args.tag_ids, "--tag-ids"))
     _set_if_not_none(kwargs, "shared", args.shared)
     _set_if_not_none(kwargs, "is_public", args.is_public)
-    _set_if_not_none(kwargs, "is_official", args.is_official)
-    _set_if_not_none(kwargs, "official_order", args.official_order)
     return client.create_agent(**kwargs)
 
 
@@ -88,8 +88,8 @@ def _cmd_task_agent_agent_update(args: argparse.Namespace, client: VectorVeinCli
     kwargs: dict[str, Any] = {"agent_id": args.agent_id}
     _set_if_not_none(kwargs, "name", args.name)
     _set_if_not_none(kwargs, "avatar", args.avatar)
-    _set_if_not_none(kwargs, "description", args.description)
-    _set_if_not_none(kwargs, "system_prompt", args.system_prompt)
+    _set_if_not_none(kwargs, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(kwargs, "system_prompt", _load_optional_text_value(args.system_prompt, "--system-prompt"))
     _set_if_not_none(kwargs, "usage_hint", _load_optional_object(args.usage_hint, "--usage-hint"))
     _set_if_not_none(kwargs, "default_model_name", args.model_name)
     _set_if_not_none(kwargs, "default_backend_type", args.backend_type)
@@ -102,7 +102,7 @@ def _cmd_task_agent_agent_update(args: argparse.Namespace, client: VectorVeinCli
     _set_if_not_none(kwargs, "default_workspace_files", _load_optional_array(args.default_workspace_files, "--default-workspace-files"))
     _set_if_not_none(kwargs, "default_sub_agent_ids", _load_optional_array(args.default_sub_agent_ids, "--default-sub-agent-ids"))
     _set_if_not_none(kwargs, "required_skills", _load_optional_array(args.required_skills, "--required-skills"))
-    _set_if_not_none(kwargs, "default_output_verifier", args.default_output_verifier)
+    _set_if_not_none(kwargs, "default_output_verifier", _load_optional_text_value(args.default_output_verifier, "--default-output-verifier"))
     _set_if_not_none(kwargs, "default_computer_pod_setting_id", args.default_computer_pod_setting_id)
     _set_if_not_none(kwargs, "default_cloud_storage_paths", _load_optional_array(args.default_cloud_storage_paths, "--default-cloud-storage-paths"))
     _set_if_not_none(kwargs, "default_cloud_storage_write_enabled", args.default_cloud_storage_write_enabled)
@@ -112,8 +112,6 @@ def _cmd_task_agent_agent_update(args: argparse.Namespace, client: VectorVeinCli
     _set_if_not_none(kwargs, "tag_ids", _load_optional_array(args.tag_ids, "--tag-ids"))
     _set_if_not_none(kwargs, "shared", args.shared)
     _set_if_not_none(kwargs, "is_public", args.is_public)
-    _set_if_not_none(kwargs, "is_official", args.is_official)
-    _set_if_not_none(kwargs, "official_order", args.official_order)
     return client.update_agent(**kwargs)
 
 
@@ -150,7 +148,7 @@ def _cmd_task_agent_agent_toggle_favorite(args: argparse.Namespace, client: Vect
 def _cmd_task_agent_agent_update_system_prompt(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.update_agent_system_prompt(
         agent_id=args.agent_id,
-        system_prompt=args.system_prompt,
+        system_prompt=_load_text_value(args.system_prompt, "--system-prompt"),
         optimization_task_id=args.optimization_task_id,
     )
 
@@ -158,7 +156,7 @@ def _cmd_task_agent_agent_update_system_prompt(args: argparse.Namespace, client:
 def _cmd_task_agent_agent_create_optimized(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.create_optimized_agent(
         agent_id=args.agent_id,
-        system_prompt=args.system_prompt,
+        system_prompt=_load_text_value(args.system_prompt, "--system-prompt"),
         name=args.name,
         optimization_task_id=args.optimization_task_id,
     )
@@ -190,7 +188,7 @@ def _cmd_task_agent_task_create(args: argparse.Namespace, client: VectorVeinClie
         )
 
     task_info = TaskInfo(
-        text=args.text,
+        text=_load_text_value(args.text, "--text"),
         attachments_detail=_collect_attachments(args),
         model_preference=args.model_preference,
         custom_backend_type=args.custom_backend_type,
@@ -215,7 +213,7 @@ def _cmd_task_agent_task_create(args: argparse.Namespace, client: VectorVeinClie
 def _cmd_task_agent_task_continue(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     result = client.continue_agent_task(
         task_id=args.task_id,
-        message=args.message,
+        message=_load_text_value(args.message, "--message"),
         attachments_detail=_collect_url_attachments(args),
     )
     if not args.wait:
@@ -230,7 +228,7 @@ def _cmd_task_agent_task_pause(args: argparse.Namespace, client: VectorVeinClien
 def _cmd_task_agent_task_resume(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     result = client.resume_agent_task(
         task_id=args.task_id,
-        message=args.message,
+        message=_load_optional_text_value(args.message, "--message"),
         attachments_detail=_collect_url_attachments(args),
     )
     if not args.wait:
@@ -242,7 +240,7 @@ def _cmd_task_agent_task_respond(args: argparse.Namespace, client: VectorVeinCli
     result = client.respond_to_agent_task(
         task_id=args.task_id,
         tool_call_id=args.tool_call_id,
-        response_content=args.response,
+        response_content=_load_text_value(args.response, "--response"),
     )
     if not args.wait:
         return result
@@ -297,7 +295,7 @@ def _cmd_task_agent_task_batch_delete(args: argparse.Namespace, client: VectorVe
 def _cmd_task_agent_task_add_pending_message(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.add_pending_message(
         task_id=args.task_id,
-        message=args.message,
+        message=_load_text_value(args.message, "--message"),
         attachments_detail=_collect_url_attachments(args),
         action_type=args.action_type,
     )
@@ -312,7 +310,10 @@ def _cmd_task_agent_task_toggle_favorite(args: argparse.Namespace, client: Vecto
 
 
 def _cmd_task_agent_task_start_prompt_optimization(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.start_prompt_optimization(task_id=args.task_id, optimization_direction=args.optimization_direction)
+    return client.start_prompt_optimization(
+        task_id=args.task_id,
+        optimization_direction=_load_text_value(args.optimization_direction, "--optimization-direction"),
+    )
 
 
 def _cmd_task_agent_task_prompt_optimizer_config(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -348,7 +349,7 @@ def _cmd_task_agent_cycle_check_workflow_status(args: argparse.Namespace, client
 
 
 def _cmd_task_agent_cycle_finish_task(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.finish_agent_cycle_task(cycle_id=args.cycle_id, message=args.message)
+    return client.finish_agent_cycle_task(cycle_id=args.cycle_id, message=_load_text_value(args.message, "--message"))
 
 
 def _cmd_task_agent_cycle_replay(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -387,7 +388,7 @@ def _cmd_task_agent_tag_search(args: argparse.Namespace, client: VectorVeinClien
 def _cmd_task_agent_collection_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "title", args.title)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "agent_ids", _load_optional_array(args.agent_ids, "--agent-ids"))
     _set_if_not_none(payload, "shared", args.shared)
     _set_if_not_none(payload, "is_public", args.is_public)
@@ -409,7 +410,7 @@ def _cmd_task_agent_collection_public_list(args: argparse.Namespace, client: Vec
 def _cmd_task_agent_collection_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "title", args.title)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "agent_ids", _load_optional_array(args.agent_ids, "--agent-ids"))
     _set_if_not_none(payload, "shared", args.shared)
     _set_if_not_none(payload, "is_public", args.is_public)
@@ -439,7 +440,7 @@ def _cmd_task_agent_mcp_server_list(args: argparse.Namespace, client: VectorVein
 def _cmd_task_agent_mcp_server_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "name", args.name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "server_url", args.server_url)
     _set_if_not_none(payload, "transport_type", args.transport_type)
     _set_if_not_none(payload, "headers", _load_optional_object(args.headers, "--headers"))
@@ -454,7 +455,7 @@ def _cmd_task_agent_mcp_server_get(args: argparse.Namespace, client: VectorVeinC
 def _cmd_task_agent_mcp_server_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "name", args.name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "server_url", args.server_url)
     _set_if_not_none(payload, "transport_type", args.transport_type)
     _set_if_not_none(payload, "headers", _load_optional_object(args.headers, "--headers"))
@@ -491,7 +492,7 @@ def _cmd_task_agent_mcp_tool_list(args: argparse.Namespace, client: VectorVeinCl
 def _cmd_task_agent_mcp_tool_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "tool_name", args.tool_name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "server_id", args.server_id)
     _set_if_not_none(payload, "tool_schema", _load_optional_object(args.tool_schema, "--tool-schema"))
     return client.create_mcp_tool(**payload)
@@ -504,7 +505,7 @@ def _cmd_task_agent_mcp_tool_get(args: argparse.Namespace, client: VectorVeinCli
 def _cmd_task_agent_mcp_tool_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "tool_name", args.tool_name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     _set_if_not_none(payload, "server_id", args.server_id)
     _set_if_not_none(payload, "tool_schema", _load_optional_object(args.tool_schema, "--tool-schema"))
     return client.update_mcp_tool(tool_id=args.tool_id, **payload)
@@ -520,7 +521,7 @@ def _cmd_task_agent_mcp_tool_logs(args: argparse.Namespace, client: VectorVeinCl
 
 def _cmd_task_agent_user_memory_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
-    _set_if_not_none(payload, "content", args.content)
+    _set_if_not_none(payload, "content", _load_optional_text_value(args.content, "--content"))
     _set_if_not_none(payload, "memory_type", args.memory_type)
     _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
     _set_if_not_none(payload, "is_active", args.is_active)
@@ -543,7 +544,7 @@ def _cmd_task_agent_user_memory_list(args: argparse.Namespace, client: VectorVei
 
 def _cmd_task_agent_user_memory_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     payload = _load_data_payload(args.data)
-    _set_if_not_none(payload, "content", args.content)
+    _set_if_not_none(payload, "content", _load_optional_text_value(args.content, "--content"))
     _set_if_not_none(payload, "memory_type", args.memory_type)
     _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
     _set_if_not_none(payload, "is_active", args.is_active)
@@ -595,8 +596,8 @@ def _cmd_task_agent_skill_create(args: argparse.Namespace, client: VectorVeinCli
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "name", args.name)
     _set_if_not_none(payload, "display_name", args.display_name)
-    _set_if_not_none(payload, "description", args.description)
-    _set_if_not_none(payload, "content", args.content)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(payload, "content", _load_optional_text_value(args.content, "--content"))
     _set_if_not_none(payload, "category_id", args.category_id)
     _set_if_not_none(payload, "permission_level", args.permission_level)
     _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
@@ -611,8 +612,8 @@ def _cmd_task_agent_skill_update(args: argparse.Namespace, client: VectorVeinCli
     payload = _load_data_payload(args.data)
     _set_if_not_none(payload, "name", args.name)
     _set_if_not_none(payload, "display_name", args.display_name)
-    _set_if_not_none(payload, "description", args.description)
-    _set_if_not_none(payload, "content", args.content)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(payload, "content", _load_optional_text_value(args.content, "--content"))
     _set_if_not_none(payload, "category_id", args.category_id)
     _set_if_not_none(payload, "permission_level", args.permission_level)
     _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
@@ -663,7 +664,11 @@ def _cmd_task_agent_skill_review_list(args: argparse.Namespace, client: VectorVe
 
 
 def _cmd_task_agent_skill_review_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.create_skill_review(skill_id=args.skill_id, rating=args.rating, comment=args.comment)
+    return client.create_skill_review(
+        skill_id=args.skill_id,
+        rating=args.rating,
+        comment=_load_optional_text_value(args.comment, "--comment"),
+    )
 
 
 def _cmd_task_agent_skill_review_delete(args: argparse.Namespace, client: VectorVeinClient) -> Any:
@@ -702,7 +707,7 @@ def _cmd_task_agent_workflow_tool_create(args: argparse.Namespace, client: Vecto
     _set_if_not_none(payload, "template_tid", args.template_tid)
     _set_if_not_none(payload, "category_id", args.category_id)
     _set_if_not_none(payload, "display_name", args.display_name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     return client.create_workflow_tool(**payload)
 
 
@@ -712,7 +717,7 @@ def _cmd_task_agent_workflow_tool_update(args: argparse.Namespace, client: Vecto
     _set_if_not_none(payload, "template_tid", args.template_tid)
     _set_if_not_none(payload, "category_id", args.category_id)
     _set_if_not_none(payload, "display_name", args.display_name)
-    _set_if_not_none(payload, "description", args.description)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
     return client.update_workflow_tool(tool_id=args.tool_id, **payload)
 
 

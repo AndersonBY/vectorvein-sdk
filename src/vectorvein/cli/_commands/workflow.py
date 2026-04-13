@@ -12,6 +12,7 @@ from vectorvein.cli._parsers import (
     _collect_optional_workflow_input_fields,
     _collect_uploaded_workflow_input_fields,
     _load_json_object,
+    _load_optional_text_value,
 )
 
 WORKFLOW_LIST_HIDDEN_FIELDS = {
@@ -138,7 +139,7 @@ def _cmd_workflow_create(args: argparse.Namespace, client: VectorVeinClient) -> 
     if args.title is not None:
         kwargs["title"] = args.title
     if args.brief is not None:
-        kwargs["brief"] = args.brief
+        kwargs["brief"] = _load_optional_text_value(args.brief, "--brief")
     if args.language is not None:
         kwargs["language"] = args.language
     if args.data is not None:
@@ -154,7 +155,7 @@ def _cmd_workflow_update(args: argparse.Namespace, client: VectorVeinClient) -> 
     if args.title is not None:
         kwargs["title"] = args.title
     if args.brief is not None:
-        kwargs["brief"] = args.brief
+        kwargs["brief"] = _load_optional_text_value(args.brief, "--brief")
     if args.language is not None:
         kwargs["language"] = args.language
     return client.update_workflow(**kwargs)

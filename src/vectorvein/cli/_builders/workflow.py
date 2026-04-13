@@ -127,7 +127,7 @@ def register_workflow_parser(top_level: argparse._SubParsersAction[argparse.Argu
         ),
     )
     workflow_create.add_argument("--title", help="Workflow title (default: New workflow).")
-    workflow_create.add_argument("--brief", help="Workflow brief description.")
+    workflow_create.add_argument("--brief", help="Workflow brief description or @file.")
     workflow_create.add_argument("--language", help="Workflow language (default: zh-CN).")
     workflow_create.add_argument("--data", help="JSON object or @file for workflow graph data.")
     workflow_create.add_argument("--source-wid", help="Source workflow ID to copy from.")
@@ -145,7 +145,7 @@ def register_workflow_parser(top_level: argparse._SubParsersAction[argparse.Argu
     workflow_update.add_argument("--wid", required=True, help="Workflow ID.")
     workflow_update.add_argument("--data", required=True, help="JSON object or @file for workflow graph data.")
     workflow_update.add_argument("--title", help="New workflow title.")
-    workflow_update.add_argument("--brief", help="New workflow brief description.")
+    workflow_update.add_argument("--brief", help="New workflow brief description or @file.")
     workflow_update.add_argument("--language", help="New workflow language.")
     workflow_update.set_defaults(handler=_cmd_workflow_update, command="workflow update")
 

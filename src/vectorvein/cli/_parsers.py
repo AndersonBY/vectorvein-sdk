@@ -24,6 +24,18 @@ ENV_API_KEY = "VECTORVEIN_API_KEY"
 ENV_BASE_URL = "VECTORVEIN_BASE_URL"
 _AGENT_DEFINITION_EXAMPLE = '{"model_name":"gpt-4o","backend_type":"openai","compress_memory_after_tokens":64000}'
 _AGENT_SETTINGS_EXAMPLE = '{"model_name":"gpt-4o","backend_type":"openai","compress_memory_after_tokens":64000}'
+TEXT_AT_FILE_OPTIONS = {
+    "--description",
+    "--brief",
+    "--comment",
+    "--optimization-direction",
+    "--system-prompt",
+    "--default-output-verifier",
+    "--text",
+    "--message",
+    "--response",
+    "--content",
+}
 
 
 def _parse_bool_text(value: str) -> bool:
@@ -53,6 +65,17 @@ def _load_json_value(raw: str, option_name: str) -> Any:
         raise CLIUsageError(f"{source} contains invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
 
 
+def _load_text_value(raw: str, option_name: str) -> str:
+    if raw.startswith("@"):
+        path = Path(raw[1:])
+        if not path.exists():
+            raise CLIUsageError(f"{option_name} references missing file: {path}")
+        if not path.is_file():
+            raise CLIUsageError(f"{option_name} expects a file path after '@': {path}")
+        return path.read_text(encoding="utf-8")
+    return raw
+
+
 def _load_json_object(raw: str, option_name: str) -> dict[str, Any]:
     value = _load_json_value(raw, option_name)
     if not isinstance(value, dict):
@@ -77,6 +100,12 @@ def _load_optional_json_array(raw: str | None, option_name: str) -> list[Any] | 
     if not raw:
         return None
     return _load_json_array(raw, option_name)
+
+
+def _load_optional_text_value(raw: str | None, option_name: str) -> str | None:
+    if raw is None:
+        return None
+    return _load_text_value(raw, option_name)
 
 
 def _require_api_key(args: argparse.Namespace) -> str:

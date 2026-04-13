@@ -183,6 +183,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 
 - `--input-field`、`--attachments`、`--body` 等参数支持直接传入 JSON 字符串。
 - 也支持 `@file.json` 形式，例如：`--input-fields @inputs.json`。
+- 部分长文本参数也支持 `@file`，例如：`--description @agent-description.md`、`--system-prompt @prompt.md`、`--brief @workflow-brief.md`、`--text @task.md`、`--message @reply.md`、`--content @memory.md`。
 - `workflow run` 的输入字段对象必须包含：`node_id`、`field_name`、`value`。
 - `workflow run --upload-to` 的格式为：`node_id:field_name:local_file_path`（多文件可重复传该参数）。
 - task-agent 的 `--agent-definition` / `--agent-settings` 必须使用 `compress_memory_after_tokens`；旧的字符阈值字段会被明确拒绝并提示如何修改。
