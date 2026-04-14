@@ -149,6 +149,18 @@ def test_sync_create_agent_sends_latest_agent_schema_fields():
     assert "official_order" not in payload
 
 
+def test_sync_create_agent_uses_80_as_default_max_cycles():
+    client = _SyncRecorder()
+
+    client.create_agent(name="Agent One")
+
+    _, endpoint, kwargs = client.calls[0]
+    payload = kwargs["json"]
+
+    assert endpoint == "task-agent/agent/create"
+    assert payload["default_max_cycles"] == 80
+
+
 def test_sync_update_agent_sends_latest_agent_schema_fields():
     client = _SyncRecorder()
 
@@ -245,6 +257,19 @@ def test_async_create_agent_sends_latest_agent_schema_fields():
         assert payload["available_mcp_tool_ids"] == ["tool_1"]
         assert "is_official" not in payload
         assert "official_order" not in payload
+
+    asyncio.run(_run())
+
+
+def test_async_create_agent_uses_80_as_default_max_cycles():
+    async def _run():
+        client = _AsyncRecorder()
+        await client.create_agent(name="Agent One")
+        _, endpoint, kwargs = client.calls[0]
+        payload = kwargs["json"]
+
+        assert endpoint == "task-agent/agent/create"
+        assert payload["default_max_cycles"] == 80
 
     asyncio.run(_run())
 
