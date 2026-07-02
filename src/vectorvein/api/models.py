@@ -284,7 +284,7 @@ class AgentTask:
     max_cycles: int | None = None
     workspace_id: str | None = None
     current_cycle_index: int | None = None
-    result: str | None = None
+    result: Any = None
     total_prompt_tokens: int | None = None
     total_completion_tokens: int | None = None
     used_credits: int | None = None

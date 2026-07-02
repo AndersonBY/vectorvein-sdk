@@ -297,6 +297,19 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
     task_get.add_argument("--task-id", required=True, help="Task ID.")
     task_get.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_get, command="task-agent task get")
 
+    task_wait = task_sub.add_parser(
+        "wait",
+        help="Wait for an existing task to finish or require input.",
+        **rich_parser_kwargs(
+            "Poll an existing task until it reaches a backend terminal status, is paused/canceled, or asks for input.",
+            examples=["vectorvein task-agent task wait --task-id task_xxx --timeout 600"],
+            notes=["Stops on backend status values such as COMPLETED, FAILED, CANCELED, MAX_CYCLE_REACH, PAUSED, and WAIT_RESPONSE."],
+        ),
+    )
+    task_wait.add_argument("--task-id", required=True, help="Task ID.")
+    task_wait.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (default: 600).")
+    task_wait.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_wait, command="task-agent task wait")
+
     task_create = task_sub.add_parser(
         "create",
         help="Create an agent task from a saved agent or ad-hoc agent definition.",
@@ -1104,6 +1117,228 @@ def _register_skill_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     skill_categories.set_defaults(handler=task_agent_cmd._cmd_task_agent_skill_categories, command="task-agent skill categories")
 
 
+def _add_eval_dataset_payload_arguments(parser: argparse.ArgumentParser, *, include_dataset_id: bool) -> None:
+    if include_dataset_id:
+        parser.add_argument("--dataset-id", required=True, help="Evaluation dataset ID.")
+    parser.add_argument("--name", help="Dataset name.")
+    parser.add_argument("--description", help="Dataset description or @file.")
+    parser.add_argument("--tags", help=_json_array_help("dataset tags"))
+    parser.add_argument("--default-judge-config", help=_json_object_help("default judge config"))
+    parser.add_argument("--input-schema", help=_json_object_help("input schema"))
+    parser.add_argument("--output-schema", help=_json_object_help("output schema"))
+    parser.add_argument("--eval-type", help="Evaluation type.")
+    parser.add_argument("--target-pass-rate", type=float, help="Target pass rate.")
+    add_bool_text_argument(parser, "--shared", help_text="Whether the dataset is shared.")
+    add_bool_text_argument(parser, "--is-public", help_text="Whether the dataset is public.")
+    add_json_data_argument(parser)
+
+
+def _register_eval_dataset_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = task_agent_sub.add_parser(
+        "eval-dataset",
+        help="Manage agent evaluation datasets.",
+        **rich_parser_kwargs(
+            "Create, inspect, update, and delete task-agent evaluation datasets exposed by the backend OpenAPI.",
+            examples=[
+                "vectorvein task-agent eval-dataset list --search smoke",
+                "vectorvein task-agent eval-dataset create --name 'Smoke Dataset' --data @dataset.json",
+            ],
+            notes=["Use --data for complex payloads; explicit flags override matching --data fields."],
+        ),
+    )
+    sub = parser.add_subparsers(dest="task_agent_eval_dataset_command")
+    sub.required = True
+
+    list_cmd = sub.add_parser(
+        "list",
+        help="List evaluation datasets.",
+        **rich_parser_kwargs("List your evaluation datasets.", examples=["vectorvein task-agent eval-dataset list --page 1 --page-size 20 --search smoke"]),
+    )
+    add_paging_arguments(list_cmd, default_page_size=20)
+    add_search_argument(list_cmd)
+    add_json_data_argument(list_cmd)
+    list_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_dataset_list, command="task-agent eval-dataset list")
+
+    get_cmd = sub.add_parser(
+        "get",
+        help="Get one evaluation dataset.",
+        **rich_parser_kwargs("Fetch one evaluation dataset by ID.", examples=["vectorvein task-agent eval-dataset get --dataset-id dataset_xxx"]),
+    )
+    get_cmd.add_argument("--dataset-id", required=True, help="Evaluation dataset ID.")
+    get_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_dataset_get, command="task-agent eval-dataset get")
+
+    create_cmd = sub.add_parser(
+        "create",
+        help="Create an evaluation dataset.",
+        **rich_parser_kwargs(
+            "Create an evaluation dataset. Provide --name directly or inside --data.",
+            examples=["vectorvein task-agent eval-dataset create --name 'Regression Set' --tags '[\"smoke\"]'"],
+        ),
+    )
+    _add_eval_dataset_payload_arguments(create_cmd, include_dataset_id=False)
+    create_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_dataset_create, command="task-agent eval-dataset create")
+
+    update_cmd = sub.add_parser(
+        "update",
+        help="Update an evaluation dataset.",
+        **rich_parser_kwargs("Update selected dataset fields.", examples=["vectorvein task-agent eval-dataset update --dataset-id dataset_xxx --description @desc.md"]),
+    )
+    _add_eval_dataset_payload_arguments(update_cmd, include_dataset_id=True)
+    update_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_dataset_update, command="task-agent eval-dataset update")
+
+    delete_cmd = sub.add_parser(
+        "delete",
+        help="Delete an evaluation dataset.",
+        **rich_parser_kwargs("Delete an evaluation dataset by ID.", examples=["vectorvein task-agent eval-dataset delete --dataset-id dataset_xxx"]),
+    )
+    delete_cmd.add_argument("--dataset-id", required=True, help="Evaluation dataset ID.")
+    delete_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_dataset_delete, command="task-agent eval-dataset delete")
+
+
+def _add_eval_case_payload_arguments(parser: argparse.ArgumentParser, *, include_case_id: bool, include_dataset_id: bool) -> None:
+    if include_case_id:
+        parser.add_argument("--case-id", required=True, help="Evaluation case ID.")
+    if include_dataset_id:
+        parser.add_argument("--dataset-id", help="Evaluation dataset ID.")
+    parser.add_argument("--title", help="Case title.")
+    parser.add_argument("--difficulty", help="Case difficulty.")
+    parser.add_argument("--input-payload", help=_json_object_help("case input payload"))
+    parser.add_argument("--reference-output", help=_json_object_help("reference output"))
+    parser.add_argument("--grading-criteria", help="Grading criteria text or @file.")
+    parser.add_argument("--graders", help=_json_array_help("grader definitions"))
+    parser.add_argument("--general-criteria", help="General criteria text or @file.")
+    parser.add_argument("--metadata", help=_json_object_help("case metadata"))
+    parser.add_argument("--order-index", type=int, help="Case order index.")
+    add_json_data_argument(parser)
+
+
+def _register_eval_case_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = task_agent_sub.add_parser(
+        "eval-case",
+        help="Manage agent evaluation cases.",
+        **rich_parser_kwargs(
+            "Create, list, update, and delete cases inside evaluation datasets.",
+            examples=["vectorvein task-agent eval-case list --dataset-id dataset_xxx"],
+            notes=["Use --data for complex case payloads; explicit flags override matching --data fields."],
+        ),
+    )
+    sub = parser.add_subparsers(dest="task_agent_eval_case_command")
+    sub.required = True
+
+    list_cmd = sub.add_parser(
+        "list",
+        help="List evaluation cases.",
+        **rich_parser_kwargs("List cases for one dataset.", examples=["vectorvein task-agent eval-case list --dataset-id dataset_xxx --page 1 --page-size 50"]),
+    )
+    list_cmd.add_argument("--dataset-id", help="Evaluation dataset ID.")
+    add_paging_arguments(list_cmd, default_page_size=50)
+    add_json_data_argument(list_cmd)
+    list_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_case_list, command="task-agent eval-case list")
+
+    create_cmd = sub.add_parser(
+        "create",
+        help="Create an evaluation case.",
+        **rich_parser_kwargs(
+            "Create one evaluation case.", examples=["vectorvein task-agent eval-case create --dataset-id dataset_xxx --title 'Case 1' --input-payload @input.json"]
+        ),
+    )
+    _add_eval_case_payload_arguments(create_cmd, include_case_id=False, include_dataset_id=True)
+    create_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_case_create, command="task-agent eval-case create")
+
+    update_cmd = sub.add_parser(
+        "update",
+        help="Update an evaluation case.",
+        **rich_parser_kwargs("Update selected case fields.", examples=["vectorvein task-agent eval-case update --case-id case_xxx --metadata @metadata.json"]),
+    )
+    _add_eval_case_payload_arguments(update_cmd, include_case_id=True, include_dataset_id=False)
+    update_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_case_update, command="task-agent eval-case update")
+
+    delete_cmd = sub.add_parser(
+        "delete",
+        help="Delete an evaluation case.",
+        **rich_parser_kwargs("Delete an evaluation case by ID.", examples=["vectorvein task-agent eval-case delete --case-id case_xxx"]),
+    )
+    delete_cmd.add_argument("--case-id", required=True, help="Evaluation case ID.")
+    delete_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_case_delete, command="task-agent eval-case delete")
+
+
+def _register_eval_run_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = task_agent_sub.add_parser(
+        "eval-run",
+        help="Create and inspect agent evaluation runs.",
+        **rich_parser_kwargs(
+            "Start evaluation runs, inspect progress, cancel runs, and fetch aggregate or case-level results.",
+            examples=[
+                "vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json",
+                "vectorvein task-agent eval-run case-results --run-id run_xxx --candidate-id candidate_xxx",
+            ],
+            notes=["Use --data for full backend payloads; explicit flags override matching --data fields."],
+        ),
+    )
+    sub = parser.add_subparsers(dest="task_agent_eval_run_command")
+    sub.required = True
+
+    create_cmd = sub.add_parser(
+        "create",
+        help="Create an evaluation run.",
+        **rich_parser_kwargs("Create an evaluation run.", examples=["vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json"]),
+    )
+    create_cmd.add_argument("--dataset-id", help="Evaluation dataset ID.")
+    create_cmd.add_argument("--run-mode", help="Run mode, for example SINGLE, GRID, or OPTIMIZE.")
+    create_cmd.add_argument("--judge-config", help=_json_object_help("judge config"))
+    create_cmd.add_argument("--grid-config", help=_json_object_help("grid config"))
+    create_cmd.add_argument("--optimization-config", help=_json_object_help("optimization config"))
+    create_cmd.add_argument("--run-options", help=_json_object_help("run options"))
+    create_cmd.add_argument("--candidate-config", help=_json_object_help("candidate config"))
+    create_cmd.add_argument("--trials-per-case", type=int, help="Trials per case.")
+    add_json_data_argument(create_cmd)
+    create_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_create, command="task-agent eval-run create")
+
+    get_cmd = sub.add_parser(
+        "get",
+        help="Get an evaluation run.",
+        **rich_parser_kwargs("Fetch one evaluation run by ID.", examples=["vectorvein task-agent eval-run get --run-id run_xxx"]),
+    )
+    get_cmd.add_argument("--run-id", required=True, help="Evaluation run ID.")
+    get_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_get, command="task-agent eval-run get")
+
+    list_cmd = sub.add_parser(
+        "list",
+        help="List evaluation runs.",
+        **rich_parser_kwargs("List evaluation runs, optionally filtered by dataset.", examples=["vectorvein task-agent eval-run list --dataset-id dataset_xxx"]),
+    )
+    list_cmd.add_argument("--dataset-id", help="Evaluation dataset ID filter.")
+    add_paging_arguments(list_cmd, default_page_size=20)
+    add_json_data_argument(list_cmd)
+    list_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_list, command="task-agent eval-run list")
+
+    cancel_cmd = sub.add_parser(
+        "cancel",
+        help="Cancel an evaluation run.",
+        **rich_parser_kwargs("Cancel a pending or running evaluation run.", examples=["vectorvein task-agent eval-run cancel --run-id run_xxx"]),
+    )
+    cancel_cmd.add_argument("--run-id", required=True, help="Evaluation run ID.")
+    cancel_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_cancel, command="task-agent eval-run cancel")
+
+    results_cmd = sub.add_parser(
+        "results",
+        help="Get aggregate evaluation run results.",
+        **rich_parser_kwargs("Fetch aggregate run and candidate results.", examples=["vectorvein task-agent eval-run results --run-id run_xxx"]),
+    )
+    results_cmd.add_argument("--run-id", required=True, help="Evaluation run ID.")
+    results_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_results, command="task-agent eval-run results")
+
+    case_results_cmd = sub.add_parser(
+        "case-results",
+        help="Get case-level evaluation run results.",
+        **rich_parser_kwargs("Fetch case-level run results.", examples=["vectorvein task-agent eval-run case-results --run-id run_xxx --candidate-id candidate_xxx"]),
+    )
+    case_results_cmd.add_argument("--run-id", required=True, help="Evaluation run ID.")
+    case_results_cmd.add_argument("--candidate-id", help="Candidate ID filter.")
+    case_results_cmd.add_argument("--case-run-id", help="Case run ID filter.")
+    case_results_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_case_results, command="task-agent eval-run case-results")
+
+
 def _register_skill_review_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     review_parser = task_agent_sub.add_parser(
         "skill-review",
@@ -1343,6 +1578,9 @@ def register_task_agent_parser(top_level: argparse._SubParsersAction[argparse.Ar
     _register_user_memory_group(task_agent_sub)
     _register_skill_group(task_agent_sub)
     _register_skill_review_group(task_agent_sub)
+    _register_eval_dataset_group(task_agent_sub)
+    _register_eval_case_group(task_agent_sub)
+    _register_eval_run_group(task_agent_sub)
     _register_task_category_group(task_agent_sub)
     _register_tool_category_group(task_agent_sub)
     _register_workflow_tool_group(task_agent_sub)

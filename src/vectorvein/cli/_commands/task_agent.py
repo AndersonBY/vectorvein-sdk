@@ -187,6 +187,10 @@ def _cmd_task_agent_task_get(args: argparse.Namespace, client: VectorVeinClient)
     return client.get_agent_task(task_id=args.task_id)
 
 
+def _cmd_task_agent_task_wait(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    return _poll_task_until_done(client, args.task_id, args.timeout)
+
+
 def _cmd_task_agent_task_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     if args.model_preference == "custom" and (not args.custom_backend_type or not args.custom_model_name):
         raise CLIUsageError(
@@ -779,3 +783,150 @@ def _cmd_task_agent_task_schedule_delete(args: argparse.Namespace, client: Vecto
 
 def _cmd_task_agent_task_schedule_toggle(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.toggle_task_schedule(schedule_id=args.schedule_id, enabled=args.enabled)
+
+
+def _require_payload_key(payload: dict[str, Any], key: str, command: str, example: str) -> None:
+    if payload.get(key) is None:
+        option = key.replace("_", "-")
+        raise CLIUsageError(
+            f"{command} requires {key}.",
+            hint=f"Provide --{option} or include {key!r} in --data.",
+            example=example,
+        )
+
+
+def _pop_payload_key(payload: dict[str, Any], key: str) -> Any:
+    return payload.pop(key, None)
+
+
+def _cmd_task_agent_eval_dataset_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "name", args.name)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(payload, "tags", _load_optional_array(args.tags, "--tags"))
+    _set_if_not_none(payload, "default_judge_config", _load_optional_object(args.default_judge_config, "--default-judge-config"))
+    _set_if_not_none(payload, "input_schema", _load_optional_object(args.input_schema, "--input-schema"))
+    _set_if_not_none(payload, "output_schema", _load_optional_object(args.output_schema, "--output-schema"))
+    _set_if_not_none(payload, "eval_type", args.eval_type)
+    _set_if_not_none(payload, "target_pass_rate", args.target_pass_rate)
+    _set_if_not_none(payload, "shared", args.shared)
+    _set_if_not_none(payload, "is_public", args.is_public)
+    _require_payload_key(payload, "name", "task-agent eval-dataset create", "vectorvein task-agent eval-dataset create --name 'Smoke Dataset'")
+    return client.create_agent_eval_dataset(**payload)
+
+
+def _cmd_task_agent_eval_dataset_get(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    return client.get_agent_eval_dataset(dataset_id=args.dataset_id)
+
+
+def _cmd_task_agent_eval_dataset_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "page", args.page)
+    _set_if_not_none(payload, "page_size", args.page_size)
+    _set_if_not_none(payload, "search", args.search)
+    return client.list_agent_eval_datasets(**payload)
+
+
+def _cmd_task_agent_eval_dataset_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _pop_payload_key(payload, "dataset_id")
+    _set_if_not_none(payload, "name", args.name)
+    _set_if_not_none(payload, "description", _load_optional_text_value(args.description, "--description"))
+    _set_if_not_none(payload, "tags", _load_optional_array(args.tags, "--tags"))
+    _set_if_not_none(payload, "default_judge_config", _load_optional_object(args.default_judge_config, "--default-judge-config"))
+    _set_if_not_none(payload, "input_schema", _load_optional_object(args.input_schema, "--input-schema"))
+    _set_if_not_none(payload, "output_schema", _load_optional_object(args.output_schema, "--output-schema"))
+    _set_if_not_none(payload, "eval_type", args.eval_type)
+    _set_if_not_none(payload, "target_pass_rate", args.target_pass_rate)
+    _set_if_not_none(payload, "shared", args.shared)
+    _set_if_not_none(payload, "is_public", args.is_public)
+    return client.update_agent_eval_dataset(dataset_id=args.dataset_id, **payload)
+
+
+def _cmd_task_agent_eval_dataset_delete(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    client.delete_agent_eval_dataset(dataset_id=args.dataset_id)
+    return {"deleted": True, "dataset_id": args.dataset_id}
+
+
+def _cmd_task_agent_eval_case_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "dataset_id", args.dataset_id)
+    _set_if_not_none(payload, "title", args.title)
+    _set_if_not_none(payload, "difficulty", args.difficulty)
+    _set_if_not_none(payload, "input_payload", _load_optional_object(args.input_payload, "--input-payload"))
+    _set_if_not_none(payload, "reference_output", _load_optional_object(args.reference_output, "--reference-output"))
+    _set_if_not_none(payload, "grading_criteria", _load_optional_text_value(args.grading_criteria, "--grading-criteria"))
+    _set_if_not_none(payload, "graders", _load_optional_array(args.graders, "--graders"))
+    _set_if_not_none(payload, "general_criteria", _load_optional_text_value(args.general_criteria, "--general-criteria"))
+    _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
+    _set_if_not_none(payload, "order_index", args.order_index)
+    _require_payload_key(payload, "dataset_id", "task-agent eval-case create", "vectorvein task-agent eval-case create --dataset-id dataset_xxx --title 'Case 1'")
+    return client.create_agent_eval_case(**payload)
+
+
+def _cmd_task_agent_eval_case_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "dataset_id", args.dataset_id)
+    _set_if_not_none(payload, "page", args.page)
+    _set_if_not_none(payload, "page_size", args.page_size)
+    _require_payload_key(payload, "dataset_id", "task-agent eval-case list", "vectorvein task-agent eval-case list --dataset-id dataset_xxx")
+    return client.list_agent_eval_cases(**payload)
+
+
+def _cmd_task_agent_eval_case_update(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _pop_payload_key(payload, "case_id")
+    _set_if_not_none(payload, "title", args.title)
+    _set_if_not_none(payload, "difficulty", args.difficulty)
+    _set_if_not_none(payload, "input_payload", _load_optional_object(args.input_payload, "--input-payload"))
+    _set_if_not_none(payload, "reference_output", _load_optional_object(args.reference_output, "--reference-output"))
+    _set_if_not_none(payload, "grading_criteria", _load_optional_text_value(args.grading_criteria, "--grading-criteria"))
+    _set_if_not_none(payload, "graders", _load_optional_array(args.graders, "--graders"))
+    _set_if_not_none(payload, "general_criteria", _load_optional_text_value(args.general_criteria, "--general-criteria"))
+    _set_if_not_none(payload, "metadata", _load_optional_object(args.metadata, "--metadata"))
+    _set_if_not_none(payload, "order_index", args.order_index)
+    return client.update_agent_eval_case(case_id=args.case_id, **payload)
+
+
+def _cmd_task_agent_eval_case_delete(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    client.delete_agent_eval_case(case_id=args.case_id)
+    return {"deleted": True, "case_id": args.case_id}
+
+
+def _cmd_task_agent_eval_run_create(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "dataset_id", args.dataset_id)
+    _set_if_not_none(payload, "run_mode", args.run_mode)
+    _set_if_not_none(payload, "judge_config", _load_optional_object(args.judge_config, "--judge-config"))
+    _set_if_not_none(payload, "grid_config", _load_optional_object(args.grid_config, "--grid-config"))
+    _set_if_not_none(payload, "optimization_config", _load_optional_object(args.optimization_config, "--optimization-config"))
+    _set_if_not_none(payload, "run_options", _load_optional_object(args.run_options, "--run-options"))
+    _set_if_not_none(payload, "candidate_config", _load_optional_object(args.candidate_config, "--candidate-config"))
+    _set_if_not_none(payload, "trials_per_case", args.trials_per_case)
+    _require_payload_key(payload, "dataset_id", "task-agent eval-run create", "vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json")
+    return client.create_agent_eval_run(**payload)
+
+
+def _cmd_task_agent_eval_run_get(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    return client.get_agent_eval_run(run_id=args.run_id)
+
+
+def _cmd_task_agent_eval_run_list(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    payload = _load_data_payload(args.data)
+    _set_if_not_none(payload, "dataset_id", args.dataset_id)
+    _set_if_not_none(payload, "page", args.page)
+    _set_if_not_none(payload, "page_size", args.page_size)
+    return client.list_agent_eval_runs(**payload)
+
+
+def _cmd_task_agent_eval_run_cancel(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    client.cancel_agent_eval_run(run_id=args.run_id)
+    return {"canceled": True, "run_id": args.run_id}
+
+
+def _cmd_task_agent_eval_run_results(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    return client.get_agent_eval_run_results(run_id=args.run_id)
+
+
+def _cmd_task_agent_eval_run_case_results(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    return client.list_agent_eval_case_results(run_id=args.run_id, candidate_id=args.candidate_id, case_run_id=args.case_run_id)

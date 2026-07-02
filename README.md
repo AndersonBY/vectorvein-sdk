@@ -125,6 +125,7 @@ vectorvein task-agent task create \
   --text "Analyze the report" \
   --agent-definition @agent_definition.json \
   --agent-settings @agent_settings.json
+vectorvein task-agent task wait --task-id task_xxx --timeout 600
 vectorvein task-agent task continue --task-id task_xxx --message "Also provide a TL;DR" --wait
 vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "Yes, proceed"
 vectorvein task-agent task get --task-id task_xxx
@@ -157,6 +158,14 @@ vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto
 vectorvein task-agent skill upload-and-parse --path ./demo.skill --filename demo.skill
 vectorvein task-agent skill-review create --skill-id skill_xxx --rating 5 --comment 'Great skill'
 
+# Task Agent — evaluation datasets / cases / runs
+vectorvein task-agent eval-dataset create --name 'Smoke Dataset' --tags '["smoke"]'
+vectorvein task-agent eval-dataset list --search smoke
+vectorvein task-agent eval-case create --dataset-id dataset_xxx --title 'Case 1' --input-payload @input.json
+vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json
+vectorvein task-agent eval-run results --run-id run_xxx
+vectorvein task-agent eval-run case-results --run-id run_xxx --candidate-id candidate_xxx
+
 # Task Agent — workflow tools / schedules / categories
 vectorvein task-agent task-category list
 vectorvein task-agent tool-category list
@@ -188,6 +197,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 - For `workflow run`, input field objects must include: `node_id`, `field_name`, `value`.
 - `workflow run --upload-to` format: `node_id:field_name:local_file_path` (repeat this option for multiple files).
 - Task-agent `--agent-definition` / `--agent-settings` must use `compress_memory_after_tokens`; legacy character-threshold fields are rejected with fix suggestions.
+- `task-agent task wait` waits on an existing task ID and stops on backend status values such as `COMPLETED`, `FAILED`, `CANCELED`, `MAX_CYCLE_REACH`, `PAUSED`, and `WAIT_RESPONSE`.
 
 ## Features
 

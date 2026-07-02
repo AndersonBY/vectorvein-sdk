@@ -125,6 +125,7 @@ vectorvein task-agent task create \
   --text "分析这份报告" \
   --agent-definition @agent_definition.json \
   --agent-settings @agent_settings.json
+vectorvein task-agent task wait --task-id task_xxx --timeout 600
 vectorvein task-agent task continue --task-id task_xxx --message "再给一个 TL;DR" --wait
 vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "好的，继续"
 vectorvein task-agent task get --task-id task_xxx
@@ -157,6 +158,14 @@ vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto
 vectorvein task-agent skill upload-and-parse --path ./demo.skill --filename demo.skill
 vectorvein task-agent skill-review create --skill-id skill_xxx --rating 5 --comment '很好用'
 
+# Task Agent — 评测数据集 / 用例 / 运行
+vectorvein task-agent eval-dataset create --name 'Smoke Dataset' --tags '["smoke"]'
+vectorvein task-agent eval-dataset list --search smoke
+vectorvein task-agent eval-case create --dataset-id dataset_xxx --title 'Case 1' --input-payload @input.json
+vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json
+vectorvein task-agent eval-run results --run-id run_xxx
+vectorvein task-agent eval-run case-results --run-id run_xxx --candidate-id candidate_xxx
+
 # Task Agent — 工作流工具 / 调度 / 分类
 vectorvein task-agent task-category list
 vectorvein task-agent tool-category list
@@ -188,6 +197,7 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 - `workflow run` 的输入字段对象必须包含：`node_id`、`field_name`、`value`。
 - `workflow run --upload-to` 的格式为：`node_id:field_name:local_file_path`（多文件可重复传该参数）。
 - task-agent 的 `--agent-definition` / `--agent-settings` 必须使用 `compress_memory_after_tokens`；旧的字符阈值字段会被明确拒绝并提示如何修改。
+- `task-agent task wait` 可等待已有任务 ID，并会在 `COMPLETED`、`FAILED`、`CANCELED`、`MAX_CYCLE_REACH`、`PAUSED`、`WAIT_RESPONSE` 等后端状态时停止。
 
 ## 功能概览
 

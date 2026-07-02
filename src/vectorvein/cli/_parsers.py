@@ -311,7 +311,20 @@ def _load_optional_agent_settings(raw: str | None) -> AgentSettings | None:
         ) from exc
 
 
-_TASK_TERMINAL_STATUSES = {"completed", "failed", "error"}
+_TASK_STOP_STATUSES = {
+    "COMPLETED",
+    "FAILED",
+    "ERROR",
+    "CANCELED",
+    "CANCELLED",
+    "MAX_CYCLE_REACH",
+    "PAUSED",
+}
+_TASK_WAITING_STATUSES = {"WAIT_RESPONSE", "WAITING"}
+
+
+def _normalize_task_status(status: str | None) -> str:
+    return (status or "").strip().upper()
 
 
 def _poll_task_until_done(
@@ -325,8 +338,9 @@ def _poll_task_until_done(
         if time.time() - start_time > timeout:
             return {"task_id": task_id, "status": "timeout", "timeout": timeout}
         task = client.get_agent_task(task_id=task_id)
-        if task.status in _TASK_TERMINAL_STATUSES:
+        normalized_status = _normalize_task_status(task.status)
+        if normalized_status in _TASK_STOP_STATUSES:
             return task
-        if task.status == "waiting" and task.waiting_question:
+        if normalized_status in _TASK_WAITING_STATUSES:
             return task
         time.sleep(3)

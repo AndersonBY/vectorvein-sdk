@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from vectorvein.api import APIKeyError
+from vectorvein.api import APIKeyError, AgentTask, WaitingQuestion
 from vectorvein.cli.main import main as cli_main
 
 
@@ -235,6 +235,183 @@ def test_cli_auth_whoami_text_output_hides_user_id(monkeypatch: pytest.MonkeyPat
     assert "credits: 99" in stdout
     assert "user_id" not in stdout
     assert stderr == ""
+
+
+def test_cli_task_wait_stops_on_backend_uppercase_completed(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    poll_statuses = ["PROCESSING", "COMPLETED"]
+    sleep_calls: list[int] = []
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        @staticmethod
+        def get_agent_task(task_id: str):
+            status = poll_statuses.pop(0)
+            return AgentTask(task_id=task_id, status=status, result={"final_response": "done"} if status == "COMPLETED" else None)
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+    monkeypatch.setattr("vectorvein.cli._parsers.time.sleep", lambda seconds: sleep_calls.append(seconds))
+
+    exit_code = cli_main(["--format", "json", "--api-key", "k", "task-agent", "task", "wait", "--task-id", "task_1", "--timeout", "10"])
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert stdout["command"] == "task-agent task wait"
+    assert stdout["data"]["task_id"] == "task_1"
+    assert stdout["data"]["status"] == "COMPLETED"
+    assert stdout["data"]["result"] == {"final_response": "done"}
+    assert sleep_calls == [3]
+
+
+def test_cli_task_wait_returns_on_backend_wait_response(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        @staticmethod
+        def get_agent_task(task_id: str):
+            return AgentTask(
+                task_id=task_id,
+                status="WAIT_RESPONSE",
+                waiting_question=WaitingQuestion(cycle_id="cycle_1", tool_call_id="tool_call_1", question="Proceed?"),
+            )
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+    monkeypatch.setattr("vectorvein.cli._parsers.time.sleep", lambda seconds: pytest.fail("WAIT_RESPONSE should not sleep"))
+
+    exit_code = cli_main(["--format", "json", "--api-key", "k", "task-agent", "task", "wait", "--task-id", "task_1", "--timeout", "10"])
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert stdout["data"]["status"] == "WAIT_RESPONSE"
+    assert stdout["data"]["waiting_question"] == {
+        "cycle_id": "cycle_1",
+        "tool_call_id": "tool_call_1",
+        "question": "Proceed?",
+    }
+
+
+def test_cli_task_agent_eval_dataset_list_merges_agent_friendly_filters(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    captured_payload: dict[str, Any] = {}
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        @staticmethod
+        def list_agent_eval_datasets(**payload: Any):
+            captured_payload.update(payload)
+            return {"datasets": [], "total": 0, "page": payload["page"], "page_size": payload["page_size"]}
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "eval-dataset",
+            "list",
+            "--page",
+            "2",
+            "--page-size",
+            "5",
+            "--search",
+            "smoke",
+            "--data",
+            '{"extra_filter":"x"}',
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert stdout["command"] == "task-agent eval-dataset list"
+    assert captured_payload == {
+        "extra_filter": "x",
+        "page": 2,
+        "page_size": 5,
+        "search": "smoke",
+    }
+
+
+def test_cli_task_agent_eval_dataset_update_flag_id_overrides_data_id(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    captured_call: dict[str, Any] = {}
+
+    class _FakeClient:
+        def __init__(self, api_key: str, base_url: str | None = None):
+            self.api_key = api_key
+            self.base_url = base_url
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return False
+
+        @staticmethod
+        def update_agent_eval_dataset(dataset_id: str, **payload: Any):
+            captured_call["dataset_id"] = dataset_id
+            captured_call["payload"] = payload
+            return {"dataset_id": dataset_id, **payload}
+
+    monkeypatch.setattr("vectorvein.cli.main.VectorVeinClient", _FakeClient)
+
+    exit_code = cli_main(
+        [
+            "--format",
+            "json",
+            "--api-key",
+            "k",
+            "task-agent",
+            "eval-dataset",
+            "update",
+            "--dataset-id",
+            "dataset_flag",
+            "--data",
+            '{"dataset_id":"dataset_from_data","description":"from data"}',
+            "--description",
+            "from flag",
+        ]
+    )
+    stdout, stderr = _read_json_output(capsys)
+
+    assert exit_code == 0
+    assert stderr == {}
+    assert stdout["ok"] is True
+    assert captured_call == {
+        "dataset_id": "dataset_flag",
+        "payload": {"description": "from flag"},
+    }
 
 
 def test_cli_workflow_list_hides_verbose_fields(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):

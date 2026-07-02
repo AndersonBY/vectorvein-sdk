@@ -32,6 +32,8 @@ uv tool install vectorvein-sdk
 - `workflow run --upload-to` 的格式是 `node_id:field_name:local_file_path`
 - `task-agent` 的 JSON schema 使用 `compress_memory_after_tokens`，不要再传旧的字符阈值字段
 - 如果 `task-agent task create --model-preference custom`，还要同时给 `--custom-backend-type` 和 `--custom-model-name`
+- 已有 Task Agent 任务需要等待时优先用 `task-agent task wait --task-id ... --timeout ...`，不要自己写循环频繁轮询
+- Task Agent 等待命令会识别后端大写状态，例如 `COMPLETED`、`FAILED`、`CANCELED`、`MAX_CYCLE_REACH`、`PAUSED`、`WAIT_RESPONSE`
 
 ## 顶层命令
 
@@ -151,6 +153,7 @@ vectorvein task-agent task create \
   --agent-definition @agent-definition.json \
   --agent-settings @agent-settings.json
 
+vectorvein task-agent task wait --task-id task_xxx --timeout 600
 vectorvein task-agent task continue --task-id task_xxx --message @reply.md --wait
 vectorvein task-agent task respond --task-id task_xxx --tool-call-id tc_xxx --response "Yes, proceed" --wait
 vectorvein task-agent task pause --task-id task_xxx
@@ -196,6 +199,9 @@ vectorvein task-agent cycle replay-summary --task-id task_xxx
 | `user-memory` | 管理持久记忆 | `vectorvein task-agent user-memory batch-toggle --memory-ids '["memory_1"]' --is-active true` |
 | `skill` | 浏览、创建、安装技能 | `vectorvein task-agent skill install --skill-id skill_xxx --permission-level auto` |
 | `skill-review` | 技能评分与评论 | `vectorvein task-agent skill-review create --skill-id skill_xxx --rating 5 --comment @review.md` |
+| `eval-dataset` | 管理 agent 评测数据集 | `vectorvein task-agent eval-dataset list --search smoke` |
+| `eval-case` | 管理评测用例 | `vectorvein task-agent eval-case create --dataset-id dataset_xxx --title "Case 1" --input-payload @input.json` |
+| `eval-run` | 创建和查看评测运行 | `vectorvein task-agent eval-run results --run-id run_xxx` |
 | `task-category` | 列出任务分类 | `vectorvein task-agent task-category list` |
 | `tool-category` | 列出工具分类 | `vectorvein task-agent tool-category list` |
 | `workflow-tool` | 把工作流发布成可复用工具 | `vectorvein task-agent workflow-tool batch-create --workflow-wids '["wf_1"]' --template-tids '["tpl_1"]' --category-id cat_xxx` |
@@ -212,6 +218,21 @@ vectorvein task-agent skill update-installation --installation-id install_xxx --
 vectorvein task-agent skill set-agent-override --skill-id skill_xxx --agent-id agent_xxx --is-enabled true
 vectorvein task-agent skill remove-agent-override --skill-id skill_xxx --agent-id agent_xxx
 vectorvein task-agent skill categories
+```
+
+评测相关高频命令：
+
+```bash
+vectorvein task-agent eval-dataset create --name "Smoke Dataset" --tags '["smoke"]'
+vectorvein task-agent eval-dataset list --search smoke
+vectorvein task-agent eval-dataset get --dataset-id dataset_xxx
+vectorvein task-agent eval-case list --dataset-id dataset_xxx
+vectorvein task-agent eval-case create --dataset-id dataset_xxx --title "Case 1" --input-payload @input.json
+vectorvein task-agent eval-run create --dataset-id dataset_xxx --candidate-config @candidate.json
+vectorvein task-agent eval-run get --run-id run_xxx
+vectorvein task-agent eval-run cancel --run-id run_xxx
+vectorvein task-agent eval-run results --run-id run_xxx
+vectorvein task-agent eval-run case-results --run-id run_xxx --candidate-id candidate_xxx
 ```
 
 ### agent-workspace

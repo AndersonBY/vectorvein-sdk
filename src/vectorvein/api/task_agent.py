@@ -31,6 +31,13 @@ def _set_if_not_none(payload: dict[str, Any], key: str, value: Any) -> None:
         payload[key] = value
 
 
+def _build_payload(base: dict[str, Any] | None = None, **fields: Any) -> dict[str, Any]:
+    payload = dict(base or {})
+    for key, value in fields.items():
+        _set_if_not_none(payload, key, value)
+    return payload
+
+
 def _create_agent_from_response(data: dict) -> Agent:
     """Create Agent object from API response, handling missing/extra fields"""
     # Create User object
@@ -1273,6 +1280,221 @@ class TaskAgentSyncMixin:
         response = self._request("POST", "task-agent/task-schedule/toggle", json=payload)
         return response["data"]
 
+    def create_agent_eval_dataset(
+        self,
+        name: str,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        default_judge_config: dict[str, Any] | None = None,
+        input_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        eval_type: str | None = None,
+        target_pass_rate: float | None = None,
+        shared: bool | None = None,
+        is_public: bool | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            name=name,
+            description=description,
+            tags=tags,
+            default_judge_config=default_judge_config,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            eval_type=eval_type,
+            target_pass_rate=target_pass_rate,
+            shared=shared,
+            is_public=is_public,
+        )
+        response = self._request("POST", "task-agent/agent-eval-dataset/create", json=request_data)
+        return response["data"]
+
+    def get_agent_eval_dataset(self, dataset_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-dataset/get", json={"dataset_id": dataset_id})
+        return response["data"]
+
+    def list_agent_eval_datasets(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        search: str | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, page=page, page_size=page_size, search=search)
+        response = self._request("POST", "task-agent/agent-eval-dataset/list", json=request_data)
+        return response["data"]
+
+    def update_agent_eval_dataset(
+        self,
+        dataset_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        default_judge_config: dict[str, Any] | None = None,
+        input_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        eval_type: str | None = None,
+        target_pass_rate: float | None = None,
+        shared: bool | None = None,
+        is_public: bool | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            name=name,
+            description=description,
+            tags=tags,
+            default_judge_config=default_judge_config,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            eval_type=eval_type,
+            target_pass_rate=target_pass_rate,
+            shared=shared,
+            is_public=is_public,
+        )
+        response = self._request("POST", "task-agent/agent-eval-dataset/update", json=request_data)
+        return response["data"]
+
+    def delete_agent_eval_dataset(self, dataset_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-dataset/delete", json={"dataset_id": dataset_id})
+        return response["data"]
+
+    def create_agent_eval_case(
+        self,
+        dataset_id: str,
+        title: str | None = None,
+        difficulty: str | None = None,
+        input_payload: dict[str, Any] | None = None,
+        reference_output: dict[str, Any] | None = None,
+        grading_criteria: str | None = None,
+        graders: list[dict[str, Any]] | None = None,
+        general_criteria: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        order_index: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            title=title,
+            difficulty=difficulty,
+            input_payload=input_payload,
+            reference_output=reference_output,
+            grading_criteria=grading_criteria,
+            graders=graders,
+            general_criteria=general_criteria,
+            metadata=metadata,
+            order_index=order_index,
+        )
+        response = self._request("POST", "task-agent/agent-eval-case/create", json=request_data)
+        return response["data"]
+
+    def list_agent_eval_cases(
+        self,
+        dataset_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, dataset_id=dataset_id, page=page, page_size=page_size)
+        response = self._request("POST", "task-agent/agent-eval-case/list", json=request_data)
+        return response["data"]
+
+    def update_agent_eval_case(
+        self,
+        case_id: str,
+        title: str | None = None,
+        difficulty: str | None = None,
+        input_payload: dict[str, Any] | None = None,
+        reference_output: dict[str, Any] | None = None,
+        grading_criteria: str | None = None,
+        graders: list[dict[str, Any]] | None = None,
+        general_criteria: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        order_index: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            case_id=case_id,
+            title=title,
+            difficulty=difficulty,
+            input_payload=input_payload,
+            reference_output=reference_output,
+            grading_criteria=grading_criteria,
+            graders=graders,
+            general_criteria=general_criteria,
+            metadata=metadata,
+            order_index=order_index,
+        )
+        response = self._request("POST", "task-agent/agent-eval-case/update", json=request_data)
+        return response["data"]
+
+    def delete_agent_eval_case(self, case_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-case/delete", json={"case_id": case_id})
+        return response["data"]
+
+    def create_agent_eval_run(
+        self,
+        dataset_id: str,
+        run_mode: str | None = None,
+        judge_config: dict[str, Any] | None = None,
+        grid_config: dict[str, Any] | None = None,
+        optimization_config: dict[str, Any] | None = None,
+        run_options: dict[str, Any] | None = None,
+        candidate_config: dict[str, Any] | None = None,
+        trials_per_case: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            run_mode=run_mode,
+            judge_config=judge_config,
+            grid_config=grid_config,
+            optimization_config=optimization_config,
+            run_options=run_options,
+            candidate_config=candidate_config,
+            trials_per_case=trials_per_case,
+        )
+        response = self._request("POST", "task-agent/agent-eval-run/create", json=request_data)
+        return response["data"]
+
+    def get_agent_eval_run(self, run_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-run/get", json={"run_id": run_id})
+        return response["data"]
+
+    def list_agent_eval_runs(
+        self,
+        dataset_id: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, dataset_id=dataset_id, page=page, page_size=page_size)
+        response = self._request("POST", "task-agent/agent-eval-run/list", json=request_data)
+        return response["data"]
+
+    def cancel_agent_eval_run(self, run_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-run/cancel", json={"run_id": run_id})
+        return response["data"]
+
+    def get_agent_eval_run_results(self, run_id: str) -> dict[str, Any]:
+        response = self._request("POST", "task-agent/agent-eval-run/results", json={"run_id": run_id})
+        return response["data"]
+
+    def list_agent_eval_case_results(
+        self,
+        run_id: str,
+        candidate_id: str | None = None,
+        case_run_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload = _build_payload(None, run_id=run_id, candidate_id=candidate_id, case_run_id=case_run_id)
+        response = self._request("POST", "task-agent/agent-eval-run/case-results", json=payload)
+        return response["data"]
+
 
 class TaskAgentAsyncMixin:
     """Asynchronous task agent API methods"""
@@ -2136,4 +2358,219 @@ class TaskAgentAsyncMixin:
     async def toggle_task_schedule(self, schedule_id: str, enabled: bool = True) -> dict[str, Any]:
         payload = {"sid": schedule_id, "enabled": enabled}
         response = await self._request("POST", "task-agent/task-schedule/toggle", json=payload)
+        return response["data"]
+
+    async def create_agent_eval_dataset(
+        self,
+        name: str,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        default_judge_config: dict[str, Any] | None = None,
+        input_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        eval_type: str | None = None,
+        target_pass_rate: float | None = None,
+        shared: bool | None = None,
+        is_public: bool | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            name=name,
+            description=description,
+            tags=tags,
+            default_judge_config=default_judge_config,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            eval_type=eval_type,
+            target_pass_rate=target_pass_rate,
+            shared=shared,
+            is_public=is_public,
+        )
+        response = await self._request("POST", "task-agent/agent-eval-dataset/create", json=request_data)
+        return response["data"]
+
+    async def get_agent_eval_dataset(self, dataset_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-dataset/get", json={"dataset_id": dataset_id})
+        return response["data"]
+
+    async def list_agent_eval_datasets(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        search: str | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, page=page, page_size=page_size, search=search)
+        response = await self._request("POST", "task-agent/agent-eval-dataset/list", json=request_data)
+        return response["data"]
+
+    async def update_agent_eval_dataset(
+        self,
+        dataset_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+        default_judge_config: dict[str, Any] | None = None,
+        input_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        eval_type: str | None = None,
+        target_pass_rate: float | None = None,
+        shared: bool | None = None,
+        is_public: bool | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            name=name,
+            description=description,
+            tags=tags,
+            default_judge_config=default_judge_config,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            eval_type=eval_type,
+            target_pass_rate=target_pass_rate,
+            shared=shared,
+            is_public=is_public,
+        )
+        response = await self._request("POST", "task-agent/agent-eval-dataset/update", json=request_data)
+        return response["data"]
+
+    async def delete_agent_eval_dataset(self, dataset_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-dataset/delete", json={"dataset_id": dataset_id})
+        return response["data"]
+
+    async def create_agent_eval_case(
+        self,
+        dataset_id: str,
+        title: str | None = None,
+        difficulty: str | None = None,
+        input_payload: dict[str, Any] | None = None,
+        reference_output: dict[str, Any] | None = None,
+        grading_criteria: str | None = None,
+        graders: list[dict[str, Any]] | None = None,
+        general_criteria: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        order_index: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            title=title,
+            difficulty=difficulty,
+            input_payload=input_payload,
+            reference_output=reference_output,
+            grading_criteria=grading_criteria,
+            graders=graders,
+            general_criteria=general_criteria,
+            metadata=metadata,
+            order_index=order_index,
+        )
+        response = await self._request("POST", "task-agent/agent-eval-case/create", json=request_data)
+        return response["data"]
+
+    async def list_agent_eval_cases(
+        self,
+        dataset_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, dataset_id=dataset_id, page=page, page_size=page_size)
+        response = await self._request("POST", "task-agent/agent-eval-case/list", json=request_data)
+        return response["data"]
+
+    async def update_agent_eval_case(
+        self,
+        case_id: str,
+        title: str | None = None,
+        difficulty: str | None = None,
+        input_payload: dict[str, Any] | None = None,
+        reference_output: dict[str, Any] | None = None,
+        grading_criteria: str | None = None,
+        graders: list[dict[str, Any]] | None = None,
+        general_criteria: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        order_index: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            case_id=case_id,
+            title=title,
+            difficulty=difficulty,
+            input_payload=input_payload,
+            reference_output=reference_output,
+            grading_criteria=grading_criteria,
+            graders=graders,
+            general_criteria=general_criteria,
+            metadata=metadata,
+            order_index=order_index,
+        )
+        response = await self._request("POST", "task-agent/agent-eval-case/update", json=request_data)
+        return response["data"]
+
+    async def delete_agent_eval_case(self, case_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-case/delete", json={"case_id": case_id})
+        return response["data"]
+
+    async def create_agent_eval_run(
+        self,
+        dataset_id: str,
+        run_mode: str | None = None,
+        judge_config: dict[str, Any] | None = None,
+        grid_config: dict[str, Any] | None = None,
+        optimization_config: dict[str, Any] | None = None,
+        run_options: dict[str, Any] | None = None,
+        candidate_config: dict[str, Any] | None = None,
+        trials_per_case: int | None = None,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(
+            payload,
+            dataset_id=dataset_id,
+            run_mode=run_mode,
+            judge_config=judge_config,
+            grid_config=grid_config,
+            optimization_config=optimization_config,
+            run_options=run_options,
+            candidate_config=candidate_config,
+            trials_per_case=trials_per_case,
+        )
+        response = await self._request("POST", "task-agent/agent-eval-run/create", json=request_data)
+        return response["data"]
+
+    async def get_agent_eval_run(self, run_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-run/get", json={"run_id": run_id})
+        return response["data"]
+
+    async def list_agent_eval_runs(
+        self,
+        dataset_id: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        **payload: Any,
+    ) -> dict[str, Any]:
+        request_data = _build_payload(payload, dataset_id=dataset_id, page=page, page_size=page_size)
+        response = await self._request("POST", "task-agent/agent-eval-run/list", json=request_data)
+        return response["data"]
+
+    async def cancel_agent_eval_run(self, run_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-run/cancel", json={"run_id": run_id})
+        return response["data"]
+
+    async def get_agent_eval_run_results(self, run_id: str) -> dict[str, Any]:
+        response = await self._request("POST", "task-agent/agent-eval-run/results", json={"run_id": run_id})
+        return response["data"]
+
+    async def list_agent_eval_case_results(
+        self,
+        run_id: str,
+        candidate_id: str | None = None,
+        case_run_id: str | None = None,
+    ) -> dict[str, Any]:
+        payload = _build_payload(None, run_id=run_id, candidate_id=candidate_id, case_run_id=case_run_id)
+        response = await self._request("POST", "task-agent/agent-eval-run/case-results", json=payload)
         return response["data"]
