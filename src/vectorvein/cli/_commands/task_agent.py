@@ -357,7 +357,10 @@ def _cmd_task_agent_cycle_run_workflow(args: argparse.Namespace, client: VectorV
 
 
 def _cmd_task_agent_cycle_check_workflow_status(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.check_agent_cycle_workflow_status(rid=args.rid)
+    return client.check_agent_cycle_workflow_status(
+        rid=args.rid,
+        cycle_id=args.cycle_id,
+    )
 
 
 def _cmd_task_agent_cycle_finish_task(args: argparse.Namespace, client: VectorVeinClient) -> Any:

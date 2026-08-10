@@ -182,7 +182,7 @@ vectorvein task-agent task close-computer-environment --task-id task_xxx
 vectorvein task-agent cycle list --task-id task_xxx
 vectorvein task-agent cycle get --cycle-id cycle_xxx
 vectorvein task-agent cycle run-workflow --cycle-id cycle_xxx --tool-name search --workflow-inputs @inputs.json
-vectorvein task-agent cycle check-workflow-status --rid rid_xxx
+vectorvein task-agent cycle check-workflow-status --cycle-id cycle_xxx --rid rid_xxx
 vectorvein task-agent cycle finish-task --cycle-id cycle_xxx --message @done.md
 vectorvein task-agent cycle replay --task-id task_xxx --start-index 0 --end-index 3
 vectorvein task-agent cycle replay-summary --task-id task_xxx

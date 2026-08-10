@@ -48,18 +48,22 @@ def _task_agent_response_for(endpoint: str) -> dict[str, Any]:
 class _TaskAgentSyncRecorder(TaskAgentSyncMixin):
     def __init__(self):
         self.calls: list[tuple[str, str]] = []
+        self.payloads: list[dict[str, Any] | None] = []
 
-    def _request(self, method: str, endpoint: str, **_: Any) -> dict[str, Any]:
+    def _request(self, method: str, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         self.calls.append((method, endpoint))
+        self.payloads.append(kwargs.get("json"))
         return _task_agent_response_for(endpoint)
 
 
 class _TaskAgentAsyncRecorder(TaskAgentAsyncMixin):
     def __init__(self):
         self.calls: list[tuple[str, str]] = []
+        self.payloads: list[dict[str, Any] | None] = []
 
-    async def _request(self, method: str, endpoint: str, **_: Any) -> dict[str, Any]:
+    async def _request(self, method: str, endpoint: str, **kwargs: Any) -> dict[str, Any]:
         self.calls.append((method, endpoint))
+        self.payloads.append(kwargs.get("json"))
         return _task_agent_response_for(endpoint)
 
 
@@ -98,7 +102,7 @@ def _exercise_sync(client: _TaskAgentSyncRecorder):
     client.get_prompt_optimizer_config()
     client.close_computer_environment("task_1")
     client.run_agent_cycle_workflow("cycle_1", "tool_name", {"foo": "bar"})
-    client.check_agent_cycle_workflow_status("rid_1")
+    client.check_agent_cycle_workflow_status("rid_1", "cycle_1")
     client.finish_agent_cycle_task("cycle_1", message="done")
     client.replay_agent_cycles("task_1", start_index=0, end_index=3)
     client.get_agent_replay_summary("task_1")
@@ -118,7 +122,7 @@ async def _exercise_async(client: _TaskAgentAsyncRecorder):
     await client.get_prompt_optimizer_config()
     await client.close_computer_environment("task_1")
     await client.run_agent_cycle_workflow("cycle_1", "tool_name", {"foo": "bar"})
-    await client.check_agent_cycle_workflow_status("rid_1")
+    await client.check_agent_cycle_workflow_status("rid_1", "cycle_1")
     await client.finish_agent_cycle_task("cycle_1", message="done")
     await client.replay_agent_cycles("task_1", start_index=0, end_index=3)
     await client.get_agent_replay_summary("task_1")
@@ -128,6 +132,11 @@ def test_task_agent_phase5_sync_endpoint_mapping():
     client = _TaskAgentSyncRecorder()
     _exercise_sync(client)
     assert client.calls == [("POST", endpoint) for endpoint in _EXPECTED_ENDPOINTS]
+    status_index = _EXPECTED_ENDPOINTS.index("task-agent/agent-cycle/check-workflow-status")
+    assert client.payloads[status_index] == {
+        "rid": "rid_1",
+        "_vectorvein_cycle_id": "cycle_1",
+    }
 
 
 def test_task_agent_phase5_async_endpoint_mapping():
@@ -135,5 +144,10 @@ def test_task_agent_phase5_async_endpoint_mapping():
         client = _TaskAgentAsyncRecorder()
         await _exercise_async(client)
         assert client.calls == [("POST", endpoint) for endpoint in _EXPECTED_ENDPOINTS]
+        status_index = _EXPECTED_ENDPOINTS.index("task-agent/agent-cycle/check-workflow-status")
+        assert client.payloads[status_index] == {
+            "rid": "rid_1",
+            "_vectorvein_cycle_id": "cycle_1",
+        }
 
     asyncio.run(_run())

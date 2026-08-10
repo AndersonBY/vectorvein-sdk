@@ -565,8 +565,12 @@ def _register_cycle_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     cycle_check = cycle_sub.add_parser(
         "check-workflow-status",
         help="Check cycle workflow execution status.",
-        **rich_parser_kwargs("Check status for a workflow triggered from a task-agent cycle.", examples=["vectorvein task-agent cycle check-workflow-status --rid rid_xxx"]),
+        **rich_parser_kwargs(
+            "Check status for a workflow triggered from a task-agent cycle.",
+            examples=["vectorvein task-agent cycle check-workflow-status --cycle-id cycle_xxx --rid rid_xxx"],
+        ),
     )
+    cycle_check.add_argument("--cycle-id", required=True, help="Owning cycle ID.")
     cycle_check.add_argument("--rid", required=True, help="Workflow run record ID.")
     cycle_check.set_defaults(handler=task_agent_cmd._cmd_task_agent_cycle_check_workflow_status, command="task-agent cycle check-workflow-status")
 

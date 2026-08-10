@@ -868,8 +868,19 @@ class TaskAgentSyncMixin:
         response = self._request("POST", "task-agent/agent-cycle/run-workflow", json=payload)
         return response["data"]
 
-    def check_agent_cycle_workflow_status(self, rid: str) -> dict[str, Any]:
-        response = self._request("POST", "task-agent/agent-cycle/check-workflow-status", json={"rid": rid})
+    def check_agent_cycle_workflow_status(
+        self,
+        rid: str,
+        cycle_id: str,
+    ) -> dict[str, Any]:
+        response = self._request(
+            "POST",
+            "task-agent/agent-cycle/check-workflow-status",
+            json={
+                "rid": rid,
+                "_vectorvein_cycle_id": cycle_id,
+            },
+        )
         return response["data"]
 
     def finish_agent_cycle_task(self, cycle_id: str, message: str = "任务已完成") -> dict[str, Any]:
@@ -1943,8 +1954,19 @@ class TaskAgentAsyncMixin:
         response = await self._request("POST", "task-agent/agent-cycle/run-workflow", json=payload)
         return response["data"]
 
-    async def check_agent_cycle_workflow_status(self, rid: str) -> dict[str, Any]:
-        response = await self._request("POST", "task-agent/agent-cycle/check-workflow-status", json={"rid": rid})
+    async def check_agent_cycle_workflow_status(
+        self,
+        rid: str,
+        cycle_id: str,
+    ) -> dict[str, Any]:
+        response = await self._request(
+            "POST",
+            "task-agent/agent-cycle/check-workflow-status",
+            json={
+                "rid": rid,
+                "_vectorvein_cycle_id": cycle_id,
+            },
+        )
         return response["data"]
 
     async def finish_agent_cycle_task(self, cycle_id: str, message: str = "任务已完成") -> dict[str, Any]:
