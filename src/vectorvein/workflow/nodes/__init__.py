@@ -51,7 +51,7 @@ from .text_processing import (
 from .tools import CodebaseAnalysis, TextTranslation, TextSearch, ProgrammingFunction, ImageSearch, WorkflowInvoke
 from .vector_db import AddData, DeleteData, Search
 from .video_generation import KlingVideo, CogVideoX
-from .web_crawlers import TextCrawler, BilibiliCrawler, DouyinCrawler, YoutubeCrawler
+from .web_crawlers import BilibiliCrawler, DouyinCrawler, SocialMediaCrawler, TextCrawler, YoutubeCrawler
 from .triggers import ButtonTrigger
 
 
@@ -117,6 +117,7 @@ __all__ = [
     "RunSql",
     "SmartQuery",
     "SoundEffects",
+    "SocialMediaCrawler",
     "SpeechRecognition",
     "StableDiffusion",
     "Table",
