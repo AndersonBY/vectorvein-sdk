@@ -22,6 +22,7 @@ ZHIHU_ACTIONS = {
     ),
     "fetch_user_search_v3": ("keyword", "offset", "limit"),
     "fetch_topic_search_v3": ("keyword", "offset", "limit"),
+    "fetch_answer_detail": ("answer_id",),
     "fetch_comment_v5": ("answer_id", "order_by", "limit", "offset"),
     "fetch_user_info": ("user_url_token",),
     "fetch_user_articles": ("user_url_token", "offset", "limit", "sort_type"),
@@ -73,3 +74,34 @@ def test_social_media_crawler_accepts_zhihu_configuration():
     assert crawler.ports["platform"].value == "zhihu"
     assert crawler.ports["action"].value == "fetch_question_answers"
     assert crawler.ports["params"].value == {"question_id": "123", "limit": 5}
+
+
+def test_social_media_crawler_accepts_zhihu_answer_detail_configuration():
+    crawler = SocialMediaCrawler()
+    crawler.ports["platform"].value = "zhihu"
+    crawler.ports["action"].value = "fetch_answer_detail"
+    crawler.ports["answer_id"].value = "456"
+
+    assert crawler.ports["action"].value == "fetch_answer_detail"
+    assert crawler.ports["answer_id"].value == "456"
+
+
+def test_social_media_crawler_preserves_zhihu_comment_contract():
+    crawler = SocialMediaCrawler()
+
+    crawler.ports["platform"].value = "zhihu"
+    crawler.ports["action"].value = "fetch_comment_v5"
+    crawler.ports["answer_id"].value = "456"
+    crawler.ports["order_by"].value = "ts"
+    crawler.ports["limit"].value = "20"
+    crawler.ports["offset"].value = "5"
+
+    assert {
+        name: crawler.ports[name].value
+        for name in ("answer_id", "order_by", "limit", "offset")
+    } == {
+        "answer_id": "456",
+        "order_by": "ts",
+        "limit": "20",
+        "offset": "5",
+    }

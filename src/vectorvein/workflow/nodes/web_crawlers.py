@@ -69,6 +69,7 @@ SOCIAL_MEDIA_ACTION_OPTIONS = [
         "fetch_article_search_v3",
         "fetch_user_search_v3",
         "fetch_topic_search_v3",
+        "fetch_answer_detail",
         "fetch_comment_v5",
         "fetch_user_info",
         "fetch_user_articles",
