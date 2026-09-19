@@ -36,7 +36,9 @@ _STUB_RESPONSE_BY_ENDPOINT = {
     "agent-workspace/get": {"status": 200, "data": _WORKSPACE_ITEM},
     "agent-workspace/list-files": {
         "status": 200,
-        "data": {"files": [{"key": "a.txt", "size": 1, "etag": "e", "last_modified": "2026-01-01T00:00:00Z"}], "tree_view": False},
+        "data": {"files": [{"key": "a.txt", "size": 1, "etag": "e", "last_modified": "2026-01-01T00:00:00Z"}], "tree_view": False,
+                 "source": "manifest", "is_computer_agent": False, "recursive": False, "workspace_revision": 7,
+                 "page_size": 50, "next_cursor": "next-page", "has_more": True},
     },
     "agent-workspace/read-file": {
         "status": 200,
@@ -86,7 +88,8 @@ def test_sync_endpoint_mapping_for_phase1_methods():
     assert client.get_user_info()["username"] == "tester"
     client.list_agent_workspaces(page=1, page_size=10)
     client.get_agent_workspace("ws_1")
-    client.list_workspace_files("ws_1")
+    files = client.list_workspace_files("ws_1")
+    assert (files.source, files.workspace_revision, files.next_cursor, files.has_more) == ("manifest", 7, "next-page", True)
     client.read_workspace_file("ws_1", "a.txt")
     client.download_workspace_file("ws_1", "a.txt")
     client.write_workspace_file("ws_1", "a.txt", "hello")
@@ -118,7 +121,8 @@ def test_async_endpoint_mapping_for_phase1_methods():
         assert (await client.get_user_info())["username"] == "tester"
         await client.list_agent_workspaces(page=1, page_size=10)
         await client.get_agent_workspace("ws_1")
-        await client.list_workspace_files("ws_1")
+        files = await client.list_workspace_files("ws_1")
+        assert (files.source, files.workspace_revision, files.next_cursor, files.has_more) == ("manifest", 7, "next-page", True)
         await client.read_workspace_file("ws_1", "a.txt")
         await client.download_workspace_file("ws_1", "a.txt")
         await client.write_workspace_file("ws_1", "a.txt", "hello")

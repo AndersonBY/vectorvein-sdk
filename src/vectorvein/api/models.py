@@ -356,6 +356,13 @@ class WorkspaceFileListResponse:
 
     files: list[WorkspaceFile] | dict[str, Any]  # Can be list or tree structure
     tree_view: bool
+    source: str | None = None
+    is_computer_agent: bool = False
+    recursive: bool = False
+    workspace_revision: int | None = None
+    page_size: int | None = None
+    next_cursor: str | None = None
+    has_more: bool = False
 
 
 @dataclass
