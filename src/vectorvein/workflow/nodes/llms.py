@@ -582,12 +582,14 @@ class Gemini(Node):
                 "temperature": InputPort(
                     name="temperature",
                     port_type=PortType.TEMPERATURE,
-                    value=0.7,
+                    value=None,
+                    required=False,
                 ),
                 "top_p": InputPort(
                     name="top_p",
                     port_type=PortType.NUMBER,
-                    value=0.95,
+                    value=None,
+                    required=False,
                 ),
                 "stream": InputPort(
                     name="stream",

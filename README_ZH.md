@@ -554,3 +554,7 @@ VECTORVEIN_RUN_LIVE_TESTS=1 python -m pytest tests/ -v
 ## 许可证
 
 MIT
+
+
+Gemini 工作流节点默认不设置 `temperature` 和 `top_p`。已有工作流会保留保存的值，
+执行工作流的服务也需要为新 Gemini 模型省略弃用参数；旧模型仍可显式设置采样参数。

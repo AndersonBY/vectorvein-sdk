@@ -554,3 +554,9 @@ For live tests, copy `tests/dev_settings.example.py` to `tests/dev_settings.py` 
 ## License
 
 MIT
+
+
+Gemini workflow nodes leave `temperature` and `top_p` unset by default. Existing
+workflows retain their saved values; the service executing them must also omit
+deprecated parameters for newer Gemini models. Explicit values remain available
+for older models.
