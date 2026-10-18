@@ -217,7 +217,6 @@ class Agent:
     default_backend_type: str | None
     default_max_cycles: int
     default_allow_interruption: bool
-    default_use_workspace: bool
     default_load_user_memory: bool | None
     default_compress_memory_after_tokens: int
     shared: bool
@@ -233,6 +232,8 @@ class Agent:
     avatar_display: str | None = None
     usage_hint: dict[str, Any] | None = None
     default_agent_type: str | None = None
+    default_reasoning_effort: str | None = None
+    default_progress_mode: str | None = None
     default_workspace_files: list[dict[str, Any]] | None = None
     default_sub_agent_ids: list[str] | None = None
     required_skills: list[dict[str, Any]] | None = None

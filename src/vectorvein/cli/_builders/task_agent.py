@@ -50,11 +50,15 @@ def _add_agent_create_update_arguments(parser: argparse.ArgumentParser, *, inclu
         help_text="Whether the agent allows interruption by default.",
         display_default=default_label if include_agent_id else True,
     )
-    add_bool_text_argument(
-        defaults,
-        "--default-use-workspace",
-        help_text="Whether the agent uses a workspace by default.",
-        display_default=default_label if include_agent_id else True,
+    defaults.add_argument(
+        "--default-reasoning-effort",
+        choices=("default", "none", "minimal", "low", "medium", "high", "xhigh", "max"),
+        help="Default reasoning effort. Use default to follow the model default.",
+    )
+    defaults.add_argument(
+        "--default-progress-mode",
+        choices=("minimal", "balanced", "verbose"),
+        help="Default frequency of user-visible progress updates.",
     )
     add_bool_text_argument(
         defaults,

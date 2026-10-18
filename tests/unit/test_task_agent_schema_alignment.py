@@ -24,7 +24,8 @@ _AGENT_RESPONSE = {
     "default_backend_type": "openai",
     "default_max_cycles": 20,
     "default_allow_interruption": True,
-    "default_use_workspace": True,
+    "default_reasoning_effort": "high",
+    "default_progress_mode": "balanced",
     "default_load_user_memory": True,
     "default_compress_memory_after_tokens": 64000,
     "default_agent_type": "computer",
@@ -74,6 +75,9 @@ def test_create_agent_from_response_uses_token_threshold_schema():
     agent = _create_agent_from_response(_AGENT_RESPONSE)
 
     assert agent.default_compress_memory_after_tokens == 64000
+    assert agent.default_reasoning_effort == "high"
+    assert agent.default_progress_mode == "balanced"
+    assert not hasattr(agent, "default_use_workspace")
     assert not hasattr(agent, "default_compress_memory_after_characters")
     assert agent.default_load_user_memory is True
     assert agent.required_skills_count == 1
@@ -95,6 +99,9 @@ def test_agent_write_method_signatures_exclude_official_only_fields():
         signature = inspect.signature(method)
         assert "is_official" not in signature.parameters
         assert "official_order" not in signature.parameters
+        assert "default_use_workspace" not in signature.parameters
+        assert "default_reasoning_effort" in signature.parameters
+        assert "default_progress_mode" in signature.parameters
 
 
 def test_agent_list_method_signatures_support_public_filters_and_remove_public_list():
@@ -113,6 +120,8 @@ def test_sync_create_agent_sends_latest_agent_schema_fields():
     client.create_agent(
         name="Agent One",
         usage_hint={"task_tip": "Summarize reports"},
+        default_reasoning_effort="high",
+        default_progress_mode="verbose",
         default_load_user_memory=True,
         default_compress_memory_after_tokens=64000,
         default_agent_type="computer",
@@ -135,6 +144,9 @@ def test_sync_create_agent_sends_latest_agent_schema_fields():
     assert payload["default_compress_memory_after_tokens"] == 64000
     assert "default_compress_memory_after_characters" not in payload
     assert payload["default_load_user_memory"] is True
+    assert payload["default_reasoning_effort"] == "high"
+    assert payload["default_progress_mode"] == "verbose"
+    assert "default_use_workspace" not in payload
     assert payload["default_agent_type"] == "computer"
     assert payload["default_workspace_files"] == [{"name": "README.md", "oss_path": "oss://bucket/readme"}]
     assert payload["default_sub_agent_ids"] == ["sub_agent_1"]
@@ -159,6 +171,9 @@ def test_sync_create_agent_uses_80_as_default_max_cycles():
 
     assert endpoint == "task-agent/agent/create"
     assert payload["default_max_cycles"] == 80
+    assert "default_use_workspace" not in payload
+    assert "default_reasoning_effort" not in payload
+    assert "default_progress_mode" not in payload
 
 
 def test_sync_update_agent_sends_latest_agent_schema_fields():
@@ -167,6 +182,8 @@ def test_sync_update_agent_sends_latest_agent_schema_fields():
     client.update_agent(
         agent_id="agent_1",
         usage_hint={"task_tip": "Summarize reports"},
+        default_reasoning_effort="default",
+        default_progress_mode="minimal",
         default_load_user_memory=False,
         default_compress_memory_after_tokens=96000,
         default_agent_type="tool",
@@ -188,6 +205,9 @@ def test_sync_update_agent_sends_latest_agent_schema_fields():
     assert payload["default_compress_memory_after_tokens"] == 96000
     assert "default_compress_memory_after_characters" not in payload
     assert payload["default_load_user_memory"] is False
+    assert payload["default_reasoning_effort"] == "default"
+    assert payload["default_progress_mode"] == "minimal"
+    assert "default_use_workspace" not in payload
     assert payload["default_agent_type"] == "tool"
     assert payload["default_workspace_files"] == [{"name": "guide.md", "oss_path": "oss://bucket/guide"}]
     assert payload["default_sub_agent_ids"] == ["sub_agent_2"]
@@ -241,6 +261,8 @@ def test_async_create_agent_sends_latest_agent_schema_fields():
         client = _AsyncRecorder()
         await client.create_agent(
             name="Agent One",
+            default_reasoning_effort="high",
+            default_progress_mode="verbose",
             default_load_user_memory=True,
             default_compress_memory_after_tokens=64000,
             default_agent_type="computer",
@@ -253,6 +275,9 @@ def test_async_create_agent_sends_latest_agent_schema_fields():
         assert payload["default_compress_memory_after_tokens"] == 64000
         assert "default_compress_memory_after_characters" not in payload
         assert payload["default_load_user_memory"] is True
+        assert payload["default_reasoning_effort"] == "high"
+        assert payload["default_progress_mode"] == "verbose"
+        assert "default_use_workspace" not in payload
         assert payload["default_agent_type"] == "computer"
         assert payload["available_mcp_tool_ids"] == ["tool_1"]
         assert "is_official" not in payload
@@ -270,6 +295,9 @@ def test_async_create_agent_uses_80_as_default_max_cycles():
 
         assert endpoint == "task-agent/agent/create"
         assert payload["default_max_cycles"] == 80
+        assert "default_use_workspace" not in payload
+        assert "default_reasoning_effort" not in payload
+        assert "default_progress_mode" not in payload
 
     asyncio.run(_run())
 
@@ -307,6 +335,44 @@ def test_async_list_agents_sends_public_filter_payload():
         }
 
     asyncio.run(_run())
+
+
+def test_async_update_agent_sends_current_runtime_defaults():
+    async def _run():
+        client = _AsyncRecorder()
+        agent = await client.update_agent("agent_1", default_reasoning_effort="default", default_progress_mode="minimal")
+        _, endpoint, kwargs = client.calls[0]
+
+        assert endpoint == "task-agent/agent/update"
+        assert kwargs["json"] == {"agent_id": "agent_1", "default_reasoning_effort": "default", "default_progress_mode": "minimal"}
+        assert agent.agent_id == "agent_1"
+
+    asyncio.run(_run())
+
+
+def test_cli_agent_list_parses_current_backend_response(monkeypatch, capsys):
+    import json
+
+    from vectorvein.api import VectorVeinClient
+    from vectorvein.cli.main import main
+
+    def request(self, method, endpoint, **kwargs):
+        assert method == "POST"
+        assert endpoint == "task-agent/agent/list"
+        return {"status": 200, "msg": "", "data": {"agents": [_AGENT_RESPONSE], "total": 1, "page": 1, "page_size": 10, "page_count": 1}}
+
+    monkeypatch.setattr(VectorVeinClient, "_request", request)
+
+    assert main(["--api-key", "test_key", "--format", "json", "task-agent", "agent", "list"]) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    payload = json.loads(captured.out)
+    agent = payload["data"]["agents"][0]
+    assert payload["ok"] is True
+    assert agent["agent_id"] == "agent_1"
+    assert agent["default_reasoning_effort"] == "high"
+    assert agent["default_progress_mode"] == "balanced"
+    assert "default_use_workspace" not in agent
 
 
 def test_cli_agent_definition_parser_accepts_token_field_only():

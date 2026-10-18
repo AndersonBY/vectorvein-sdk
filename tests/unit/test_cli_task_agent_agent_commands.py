@@ -36,7 +36,9 @@ def test_agent_create_help_lists_full_schema(capsys: pytest.CaptureFixture[str])
     assert "--is-official" not in out
     assert "--official-order" not in out
     assert "Whether the agent allows interruption by default." in out
-    assert "Whether the agent uses a workspace by default." in out
+    assert "--default-use-workspace" not in out
+    assert "--default-reasoning-effort" in out
+    assert "--default-progress-mode" in out
     assert "Whether the agent loads user memory by default." in out
     assert "Whether mounted cloud storage is writable." in out
     assert "Whether the agent is shared." in out
@@ -95,8 +97,10 @@ def test_cli_agent_create_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
             "30",
             "--default-allow-interruption",
             "false",
-            "--default-use-workspace",
-            "true",
+            "--default-reasoning-effort",
+            "high",
+            "--default-progress-mode",
+            "verbose",
             "--default-load-user-memory",
             "true",
             "--default-compress-memory-after-tokens",
@@ -146,7 +150,8 @@ def test_cli_agent_create_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
         "default_backend_type": "openai",
         "default_max_cycles": 30,
         "default_allow_interruption": False,
-        "default_use_workspace": True,
+        "default_reasoning_effort": "high",
+        "default_progress_mode": "verbose",
         "default_load_user_memory": True,
         "default_compress_memory_after_tokens": 64000,
         "default_agent_type": "computer",
@@ -199,6 +204,10 @@ def test_cli_agent_update_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
             "agent_1",
             "--name",
             "Research Assistant v2",
+            "--default-reasoning-effort",
+            "default",
+            "--default-progress-mode",
+            "minimal",
             "--default-load-user-memory",
             "false",
             "--default-compress-memory-after-tokens",
@@ -221,6 +230,9 @@ def test_cli_agent_update_accepts_full_schema(monkeypatch: pytest.MonkeyPatch, c
     assert stderr == {}
     assert stdout["ok"] is True
     assert captured["agent_id"] == "agent_1"
+    assert captured["default_reasoning_effort"] == "default"
+    assert captured["default_progress_mode"] == "minimal"
+    assert "default_use_workspace" not in captured
     assert captured["default_load_user_memory"] is False
     assert captured["default_compress_memory_after_tokens"] == 96000
     assert captured["default_cloud_storage_write_enabled"] is False

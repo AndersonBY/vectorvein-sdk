@@ -56,7 +56,8 @@ def _create_agent_from_response(data: dict) -> Agent:
         default_backend_type=data.get("default_backend_type"),
         default_max_cycles=data["default_max_cycles"],
         default_allow_interruption=data["default_allow_interruption"],
-        default_use_workspace=data["default_use_workspace"],
+        default_reasoning_effort=data.get("default_reasoning_effort"),
+        default_progress_mode=data.get("default_progress_mode"),
         default_load_user_memory=data.get("default_load_user_memory"),
         default_compress_memory_after_tokens=data["default_compress_memory_after_tokens"],
         shared=data["shared"],
@@ -173,7 +174,8 @@ class TaskAgentSyncMixin:
         default_backend_type: str | None = None,
         default_max_cycles: int = 80,
         default_allow_interruption: bool = True,
-        default_use_workspace: bool = True,
+        default_reasoning_effort: str | None = None,
+        default_progress_mode: str | None = None,
         default_load_user_memory: bool | None = None,
         default_compress_memory_after_tokens: int = 128000,
         default_agent_type: str | None = None,
@@ -203,7 +205,8 @@ class TaskAgentSyncMixin:
             default_backend_type: Default backend type
             default_max_cycles: Default max cycles
             default_allow_interruption: Default allow interruption
-            default_use_workspace: Default use workspace
+            default_reasoning_effort: Default reasoning effort
+            default_progress_mode: Default progress mode (minimal, balanced, verbose)
             default_load_user_memory: Default load user memory
             default_compress_memory_after_tokens: Default compress memory threshold
             default_agent_type: Default agent type
@@ -232,7 +235,6 @@ class TaskAgentSyncMixin:
             "system_prompt": system_prompt,
             "default_max_cycles": default_max_cycles,
             "default_allow_interruption": default_allow_interruption,
-            "default_use_workspace": default_use_workspace,
             "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
@@ -243,6 +245,8 @@ class TaskAgentSyncMixin:
         _set_if_not_none(payload, "usage_hint", usage_hint)
         _set_if_not_none(payload, "default_model_name", default_model_name)
         _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_reasoning_effort", default_reasoning_effort)
+        _set_if_not_none(payload, "default_progress_mode", default_progress_mode)
         _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
         _set_if_not_none(payload, "default_agent_type", default_agent_type)
         _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
@@ -322,7 +326,8 @@ class TaskAgentSyncMixin:
         default_backend_type: str | None = None,
         default_max_cycles: int | None = None,
         default_allow_interruption: bool | None = None,
-        default_use_workspace: bool | None = None,
+        default_reasoning_effort: str | None = None,
+        default_progress_mode: str | None = None,
         default_load_user_memory: bool | None = None,
         default_compress_memory_after_tokens: int | None = None,
         default_agent_type: str | None = None,
@@ -353,7 +358,8 @@ class TaskAgentSyncMixin:
             default_backend_type: Default backend type
             default_max_cycles: Default max cycles
             default_allow_interruption: Default allow interruption
-            default_use_workspace: Default use workspace
+            default_reasoning_effort: Default reasoning effort
+            default_progress_mode: Default progress mode (minimal, balanced, verbose)
             default_load_user_memory: Default load user memory
             default_compress_memory_after_tokens: Default compress memory threshold
             default_agent_type: Default agent type
@@ -386,9 +392,10 @@ class TaskAgentSyncMixin:
         _set_if_not_none(payload, "usage_hint", usage_hint)
         _set_if_not_none(payload, "default_model_name", default_model_name)
         _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_reasoning_effort", default_reasoning_effort)
+        _set_if_not_none(payload, "default_progress_mode", default_progress_mode)
         _set_if_not_none(payload, "default_max_cycles", default_max_cycles)
         _set_if_not_none(payload, "default_allow_interruption", default_allow_interruption)
-        _set_if_not_none(payload, "default_use_workspace", default_use_workspace)
         _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
         _set_if_not_none(payload, "default_compress_memory_after_tokens", default_compress_memory_after_tokens)
         _set_if_not_none(payload, "default_agent_type", default_agent_type)
@@ -1522,7 +1529,8 @@ class TaskAgentAsyncMixin:
         default_backend_type: str | None = None,
         default_max_cycles: int = 80,
         default_allow_interruption: bool = True,
-        default_use_workspace: bool = True,
+        default_reasoning_effort: str | None = None,
+        default_progress_mode: str | None = None,
         default_load_user_memory: bool | None = None,
         default_compress_memory_after_tokens: int = 128000,
         default_agent_type: str | None = None,
@@ -1546,7 +1554,6 @@ class TaskAgentAsyncMixin:
             "system_prompt": system_prompt,
             "default_max_cycles": default_max_cycles,
             "default_allow_interruption": default_allow_interruption,
-            "default_use_workspace": default_use_workspace,
             "default_compress_memory_after_tokens": default_compress_memory_after_tokens,
             "shared": shared,
             "is_public": is_public,
@@ -1557,6 +1564,8 @@ class TaskAgentAsyncMixin:
         _set_if_not_none(payload, "usage_hint", usage_hint)
         _set_if_not_none(payload, "default_model_name", default_model_name)
         _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_reasoning_effort", default_reasoning_effort)
+        _set_if_not_none(payload, "default_progress_mode", default_progress_mode)
         _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
         _set_if_not_none(payload, "default_agent_type", default_agent_type)
         _set_if_not_none(payload, "default_workspace_files", default_workspace_files)
@@ -1612,7 +1621,8 @@ class TaskAgentAsyncMixin:
         default_backend_type: str | None = None,
         default_max_cycles: int | None = None,
         default_allow_interruption: bool | None = None,
-        default_use_workspace: bool | None = None,
+        default_reasoning_effort: str | None = None,
+        default_progress_mode: str | None = None,
         default_load_user_memory: bool | None = None,
         default_compress_memory_after_tokens: int | None = None,
         default_agent_type: str | None = None,
@@ -1640,9 +1650,10 @@ class TaskAgentAsyncMixin:
         _set_if_not_none(payload, "usage_hint", usage_hint)
         _set_if_not_none(payload, "default_model_name", default_model_name)
         _set_if_not_none(payload, "default_backend_type", default_backend_type)
+        _set_if_not_none(payload, "default_reasoning_effort", default_reasoning_effort)
+        _set_if_not_none(payload, "default_progress_mode", default_progress_mode)
         _set_if_not_none(payload, "default_max_cycles", default_max_cycles)
         _set_if_not_none(payload, "default_allow_interruption", default_allow_interruption)
-        _set_if_not_none(payload, "default_use_workspace", default_use_workspace)
         _set_if_not_none(payload, "default_load_user_memory", default_load_user_memory)
         _set_if_not_none(payload, "default_compress_memory_after_tokens", default_compress_memory_after_tokens)
         _set_if_not_none(payload, "default_agent_type", default_agent_type)
