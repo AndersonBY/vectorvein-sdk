@@ -189,8 +189,6 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 `auth whoami` returns `uid`, `username`, `email`, `credits`, and `date_joined` (it does not expose internal numeric user IDs).
 `workflow list` hides verbose fields by default: `language`, `images`, `is_fast_access`, `browser_settings`, `chrome_settings`, `use_in_wechat`.
 
-Agent management follows the current backend schema. As of 0.3.91, `Agent` responses and the sync/async `create_agent` / `update_agent` methods no longer include `default_use_workspace`; the CLI option `--default-use-workspace` is removed. Use `default_reasoning_effort` / `--default-reasoning-effort` and `default_progress_mode` / `--default-progress-mode` to configure the corresponding runtime defaults. Omitted values leave these defaults to the backend.
-
 ### JSON Input Rules
 
 - Options like `--input-field`, `--attachments`, `--body` accept inline JSON.

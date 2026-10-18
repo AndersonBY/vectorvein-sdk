@@ -189,8 +189,6 @@ vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,
 `auth whoami` 返回字段为 `uid`、`username`、`email`、`credits`、`date_joined`（不会暴露内部自增 `user_id`）。
 `workflow list` 默认隐藏冗余字段：`language`、`images`、`is_fast_access`、`browser_settings`、`chrome_settings`、`use_in_wechat`。
 
-Agent 管理接口与当前 backend schema 保持一致。从 0.3.91 起，`Agent` 响应及同步／异步 `create_agent`、`update_agent` 方法移除 `default_use_workspace`，CLI 同时移除 `--default-use-workspace`。新增 `default_reasoning_effort`／`--default-reasoning-effort` 和 `default_progress_mode`／`--default-progress-mode`，分别配置默认推理强度和进度说明频率；省略时由 backend 决定默认值。
-
 ### JSON 参数规则
 
 - `--input-field`、`--attachments`、`--body` 等参数支持直接传入 JSON 字符串。
