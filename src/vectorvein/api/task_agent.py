@@ -203,7 +203,7 @@ class TaskAgentSyncMixin:
             usage_hint: Agent usage hint metadata
             default_model_name: Default model name
             default_backend_type: Default backend type
-            default_max_cycles: Default max cycles
+            default_max_cycles: Default max cycles; 0 disables the limit
             default_allow_interruption: Default allow interruption
             default_reasoning_effort: Default reasoning effort
             default_progress_mode: Default progress mode (minimal, balanced, verbose)
@@ -356,7 +356,7 @@ class TaskAgentSyncMixin:
             usage_hint: Agent usage hint metadata
             default_model_name: Default model name
             default_backend_type: Default backend type
-            default_max_cycles: Default max cycles
+            default_max_cycles: Default max cycles; 0 disables the limit
             default_allow_interruption: Default allow interruption
             default_reasoning_effort: Default reasoning effort
             default_progress_mode: Default progress mode (minimal, balanced, verbose)
@@ -512,7 +512,7 @@ class TaskAgentSyncMixin:
             agent_id_to_start: Agent ID to start
             agent_definition_to_start: Agent definition to start
             agent_settings: Agent settings override
-            max_cycles: Max cycles override
+            max_cycles: Max cycles override; 0 disables the limit, None inherits the Agent default
             title: Custom task title
 
         Returns:
