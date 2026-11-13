@@ -2,6 +2,7 @@ import sys
 import json
 import importlib
 from pathlib import Path
+from typing import Any
 
 
 def _get_workflow_package_path():
@@ -83,7 +84,7 @@ def generate_python_code(
 
     # 收集需要导入的节点类
     node_imports = set()
-    node_instances = {}
+    node_instances: dict[str, dict[str, Any]] = {}
 
     # 收集所有连接的端口
     connected_ports = set()
@@ -110,7 +111,7 @@ def generate_python_code(
         # 动态导入节点类
         NodeClass = _safe_import_node_class(category, node_type)
         if NodeClass is None:
-            continue
+            raise ValueError(f"Node class not found: {category}.{node_type}")
 
         node_imports.add(f"from vectorvein.workflow.nodes.{category} import {node_type}")
 
@@ -118,15 +119,16 @@ def generate_python_code(
         node_instance = NodeClass()
 
         add_ports = []
-        show_ports = []
+        port_overrides = []
         values = []
         for port_name, port in node["data"]["template"].items():
             if port_name not in node_instance.ports:
                 add_ports.append(port)
                 continue
 
-            if port["show"] and not node_instance.ports[port_name].show:  # 只有实际节点的 show=True 且端口默认 show=False 时，才添加到 show_ports
-                show_ports.append(port["name"])
+            for attribute in ("show", "options"):
+                if attribute in port and port[attribute] != getattr(node_instance.ports[port_name], attribute):
+                    port_overrides.append((port_name, attribute, port[attribute]))
 
             # 比较端口值与默认值
             port_value = port["value"]
@@ -135,17 +137,13 @@ def generate_python_code(
             # 判断端口是否有值且值与默认不同，并且端口满足以下条件之一：
             # 有连接、是输入端口、在UI上显示、是编程节点
             port_is_connected = (node["id"], port["name"]) in connected_ports
-            if (
-                port_value
-                and port_value != default_value
-                and (port_is_connected or not port.get("is_output", False) or port.get("show", False) or node_type == "ProgrammingFunction")
-            ):
+            if port_value != default_value and (port_is_connected or not port.get("is_output", False) or port.get("show", False) or node_type == "ProgrammingFunction"):
                 values.append(port)
 
         node_instances[node["id"]] = {
             "var_name": f"{task_name}_{len(node_instances)}",
             "type": node_type,
-            "show_ports": show_ports,
+            "port_overrides": port_overrides,
             "values": values,
             "add_ports": add_ports,
         }
@@ -187,20 +185,22 @@ def generate_python_code(
                 params.append(f'field_type="{port["type"]}"')
             code.append(f"{node_info['var_name']}.add_port({', '.join(params)})")
 
-        for port_name in node_info["show_ports"]:
-            code.append(f"{node_info['var_name']}.ports['{port_name}'].show = True")
+        for port_name, attribute, value in node_info["port_overrides"]:
+            code.append(f"{node_info['var_name']}.ports[{port_name!r}].{attribute} = {value!r}")
 
         for port in node_info["values"]:
-            code.append(f"{node_info['var_name']}.ports['{port['name']}'].value = {to_python_str(port['value'])}")
+            code.append(f"{node_info['var_name']}.ports[{port['name']!r}].value = {to_python_str(port['value'])}")
 
     code.append("")
 
     # 生成边的连接代码
     for edge in workflow_data["edges"]:
+        if edge["source"] not in node_instances or edge["target"] not in node_instances:
+            continue
         source_var = node_instances[edge["source"]]["var_name"]
         target_var = node_instances[edge["target"]]["var_name"]
         source_handle = edge["sourceHandle"]
         target_handle = edge["targetHandle"]
-        code.append(f'workflow.connect({source_var}, "{source_handle}", {target_var}, "{target_handle}")')
+        code.append(f"workflow.connect({source_var}, {source_handle!r}, {target_var}, {target_handle!r})")
 
     return "\n".join(code)

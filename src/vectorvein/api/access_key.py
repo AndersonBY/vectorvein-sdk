@@ -1,9 +1,23 @@
 """Access Key API functionality"""
 
-from typing import Literal
+from dataclasses import fields
+from typing import Any, Literal
 
 from .exceptions import AccessKeyError, VectorVeinAPIError
-from .models import AccessKey, AccessKeyListResponse
+from .models import AccessKey, AccessKeyListResponse, VApp
+
+
+def _create_vapp(data: dict[str, Any]) -> VApp:
+    values: dict[str, Any] = {item.name: data[item.name] for item in fields(VApp) if item.name in data}
+    return VApp(**values)
+
+
+def _create_access_key(data: dict[str, Any]) -> AccessKey:
+    data = {"v_app": None, "v_apps": [], "records": [], **data}
+    if data["v_app"] is not None:
+        data["v_app"] = _create_vapp(data["v_app"])
+    data["v_apps"] = [_create_vapp(app) for app in data["v_apps"]]
+    return AccessKey(**data)
 
 
 class AccessKeySyncMixin:
@@ -28,7 +42,7 @@ class AccessKeySyncMixin:
 
         try:
             result = self._request("GET", "vapp/access-key/get", params=params)
-            return [AccessKey(**key) for key in result["data"]]
+            return [_create_access_key(key) for key in result["data"]]
         except VectorVeinAPIError as e:
             if e.status_code == 404:
                 raise AccessKeyError("Access key does not exist") from e
@@ -83,12 +97,12 @@ class AccessKeySyncMixin:
             payload["max_credits"] = max_credits
         if max_use_count is not None:
             payload["max_use_count"] = max_use_count
-        if description:
+        if description is not None:
             payload["description"] = description
 
         try:
             result = self._request("POST", "vapp/access-key/create", json=payload)
-            return [AccessKey(**key) for key in result["data"]]
+            return [_create_access_key(key) for key in result["data"]]
         except VectorVeinAPIError as e:
             if e.status_code == 404:
                 raise AccessKeyError("The specified application does not exist") from e
@@ -130,7 +144,9 @@ class AccessKeySyncMixin:
             payload["access_key_type"] = access_key_type
 
         result = self._request("POST", "vapp/access-key/list", json=payload)
-        return AccessKeyListResponse(**result["data"])
+        data = dict(result["data"])
+        data["access_keys"] = [_create_access_key(key) for key in data["access_keys"]]
+        return AccessKeyListResponse(**data)
 
     def delete_access_keys(self, app_id: str, access_keys: list[str]) -> None:
         """Delete access key
@@ -182,7 +198,7 @@ class AccessKeySyncMixin:
             payload["max_use_count"] = max_use_count
         if max_credits is not None:
             payload["max_credits"] = max_credits
-        if description:
+        if description is not None:
             payload["description"] = description
         if access_key_type:
             payload["access_key_type"] = access_key_type
@@ -232,7 +248,7 @@ class AccessKeyAsyncMixin:
 
         try:
             result = await self._request("GET", "vapp/access-key/get", params=params)
-            return [AccessKey(**key) for key in result["data"]]
+            return [_create_access_key(key) for key in result["data"]]
         except VectorVeinAPIError as e:
             if e.status_code == 404:
                 raise AccessKeyError("Access key does not exist") from e
@@ -287,12 +303,12 @@ class AccessKeyAsyncMixin:
             payload["max_credits"] = max_credits
         if max_use_count is not None:
             payload["max_use_count"] = max_use_count
-        if description:
+        if description is not None:
             payload["description"] = description
 
         try:
             result = await self._request("POST", "vapp/access-key/create", json=payload)
-            return [AccessKey(**key) for key in result["data"]]
+            return [_create_access_key(key) for key in result["data"]]
         except VectorVeinAPIError as e:
             if e.status_code == 404:
                 raise AccessKeyError("The specified application does not exist") from e
@@ -334,7 +350,9 @@ class AccessKeyAsyncMixin:
             payload["access_key_type"] = access_key_type
 
         result = await self._request("POST", "vapp/access-key/list", json=payload)
-        return AccessKeyListResponse(**result["data"])
+        data = dict(result["data"])
+        data["access_keys"] = [_create_access_key(key) for key in data["access_keys"]]
+        return AccessKeyListResponse(**data)
 
     async def delete_access_keys(self, app_id: str, access_keys: list[str]) -> None:
         """Async delete access key
@@ -386,7 +404,7 @@ class AccessKeyAsyncMixin:
             payload["max_use_count"] = max_use_count
         if max_credits is not None:
             payload["max_credits"] = max_credits
-        if description:
+        if description is not None:
             payload["description"] = description
         if access_key_type:
             payload["access_key_type"] = access_key_type

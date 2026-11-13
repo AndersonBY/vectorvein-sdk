@@ -21,10 +21,12 @@ def _cmd_workspace_get(args: argparse.Namespace, client: VectorVeinClient) -> An
 
 
 def _cmd_workspace_files(args: argparse.Namespace, client: VectorVeinClient) -> Any:
+    options = {key: value for key, value in {"page_size": args.page_size, "cursor": args.cursor, "recursive": args.recursive, "task_id": args.task_id}.items() if value is not None}
     return client.list_workspace_files(
         workspace_id=args.workspace_id,
         prefix=args.prefix,
         tree_view=args.tree_view,
+        **options,
     )
 
 
@@ -71,7 +73,3 @@ def _cmd_workspace_download(args: argparse.Namespace, client: VectorVeinClient) 
 
 def _cmd_workspace_zip(args: argparse.Namespace, client: VectorVeinClient) -> Any:
     return client.zip_workspace_files(workspace_id=args.workspace_id)
-
-
-def _cmd_workspace_sync(args: argparse.Namespace, client: VectorVeinClient) -> Any:
-    return client.sync_workspace_container_to_oss(workspace_id=args.workspace_id)

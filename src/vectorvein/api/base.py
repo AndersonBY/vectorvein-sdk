@@ -57,16 +57,18 @@ class BaseClient:
         try:
             result = response.json()
         except ValueError as e:
+            if response.status_code == 401:
+                raise APIKeyError("Authentication failed (HTTP 401)", status_code=401) from e
             raise RequestError(f"Request failed: invalid JSON response (HTTP {response.status_code})") from e
 
         if not isinstance(result, dict):
             raise RequestError(f"Request failed: invalid response format (HTTP {response.status_code})")
 
-        status_code = result.get("status")
-        if not isinstance(status_code, int):
+        status_code = response.status_code if response.is_error else result.get("status")
+        if type(status_code) is not int:
             raise RequestError(f"Request failed: missing response status (HTTP {response.status_code})")
 
-        message = str(result.get("msg", "Unknown error"))
+        message = str(result.get("msg", result.get("detail", "Unknown error")))
         if status_code in {200, 201, 202}:
             return result
 
@@ -118,8 +120,9 @@ class BaseSyncClient(BaseClient):
             VectorVeinAPIError: API error
             APIKeyError: API key is invalid or expired
         """
-        url = f"{self.base_url}/{endpoint}"
-        headers = self.default_headers.copy()
+        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        headers = httpx.Headers(self.default_headers)
+        headers.update(kwargs.pop("headers", None) or {})
         if api_key_type == "VAPP":
             headers["VECTORVEIN-API-KEY-TYPE"] = "VAPP"
 
@@ -213,8 +216,9 @@ class BaseAsyncClient(BaseClient):
             VectorVeinAPIError: API error
             APIKeyError: API key is invalid or expired
         """
-        url = f"{self.base_url}/{endpoint}"
-        headers = self.default_headers.copy()
+        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        headers = httpx.Headers(self.default_headers)
+        headers.update(kwargs.pop("headers", None) or {})
         if api_key_type == "VAPP":
             headers["VECTORVEIN-API-KEY-TYPE"] = "VAPP"
 

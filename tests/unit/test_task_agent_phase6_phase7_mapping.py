@@ -49,10 +49,7 @@ _EXPECTED_CALLS = [
     "task-agent/mcp-server/test-connection",
     "task-agent/mcp-server/test-existing-server",
     "task-agent/mcp-tool/list",
-    "task-agent/mcp-tool/create",
     "task-agent/mcp-tool/get",
-    "task-agent/mcp-tool/update",
-    "task-agent/mcp-tool/delete",
     "task-agent/mcp-tool/get-logs",
     "task-agent/user-memory/create",
     "task-agent/user-memory/get",
@@ -125,10 +122,7 @@ def _exercise_sync(client: _TaskAgentSyncRecorder):
     client.test_mcp_server_connection(server_url="https://example.com")
     client.test_existing_mcp_server("server_1")
     client.list_mcp_tools(page=1, page_size=10)
-    client.create_mcp_tool(tool_name="tool")
     client.get_mcp_tool("tool_1")
-    client.update_mcp_tool("tool_1", tool_name="updated")
-    client.delete_mcp_tool("tool_1")
     client.get_mcp_tool_logs("tool_1", page=1, page_size=20)
     client.create_user_memory(content="remember this")
     client.get_user_memory("memory_1")
@@ -195,10 +189,7 @@ async def _exercise_async(client: _TaskAgentAsyncRecorder):
     await client.test_mcp_server_connection(server_url="https://example.com")
     await client.test_existing_mcp_server("server_1")
     await client.list_mcp_tools(page=1, page_size=10)
-    await client.create_mcp_tool(tool_name="tool")
     await client.get_mcp_tool("tool_1")
-    await client.update_mcp_tool("tool_1", tool_name="updated")
-    await client.delete_mcp_tool("tool_1")
     await client.get_mcp_tool_logs("tool_1", page=1, page_size=20)
     await client.create_user_memory(content="remember this")
     await client.get_user_memory("memory_1")

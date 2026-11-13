@@ -12,13 +12,12 @@ from vectorvein.cli._commands.workspace import (
     _cmd_workspace_get,
     _cmd_workspace_list,
     _cmd_workspace_read,
-    _cmd_workspace_sync,
     _cmd_workspace_write,
     _cmd_workspace_zip,
 )
 
 
-def register_workspace_parser(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_workspace_parser(top_level: argparse._SubParsersAction) -> None:
     workspace_parser = top_level.add_parser(
         "agent-workspace",
         help="Agent workspace commands.",
@@ -60,6 +59,10 @@ def register_workspace_parser(top_level: argparse._SubParsersAction[argparse.Arg
     workspace_files.add_argument("--workspace-id", required=True, help="Workspace ID.")
     workspace_files.add_argument("--prefix", help="Path prefix filter.")
     workspace_files.add_argument("--tree-view", action="store_true", help="Return files in tree-view style.")
+    workspace_files.add_argument("--page-size", type=int, help="Maximum files per page.")
+    workspace_files.add_argument("--cursor", help="next_cursor from the previous file page.")
+    workspace_files.add_argument("--recursive", action="store_true", default=None, help="Request recursive file listing.")
+    workspace_files.add_argument("--task-id", help="Read the explicit Task branch for a Project workspace.")
     workspace_files.set_defaults(handler=_cmd_workspace_files, command="agent-workspace files")
 
     workspace_read = workspace_sub.add_parser(
@@ -118,11 +121,3 @@ def register_workspace_parser(top_level: argparse._SubParsersAction[argparse.Arg
     )
     workspace_zip.add_argument("--workspace-id", required=True, help="Workspace ID.")
     workspace_zip.set_defaults(handler=_cmd_workspace_zip, command="agent-workspace zip")
-
-    workspace_sync = workspace_sub.add_parser(
-        "sync",
-        help="Trigger container-to-OSS sync for workspace.",
-        **rich_parser_kwargs("Trigger a workspace sync from the runtime container back to OSS storage.", examples=["vectorvein agent-workspace sync --workspace-id ws_xxx"]),
-    )
-    workspace_sync.add_argument("--workspace-id", required=True, help="Workspace ID.")
-    workspace_sync.set_defaults(handler=_cmd_workspace_sync, command="agent-workspace sync")

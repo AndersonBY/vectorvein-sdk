@@ -22,7 +22,7 @@ from vectorvein.cli._commands.workflow import (
 )
 
 
-def register_workflow_parser(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_workflow_parser(top_level: argparse._SubParsersAction) -> None:
     workflow_parser = top_level.add_parser(
         "workflow",
         help="Workflow execution and query commands.",

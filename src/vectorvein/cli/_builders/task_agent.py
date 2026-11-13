@@ -74,6 +74,7 @@ def _add_agent_create_update_arguments(parser: argparse.ArgumentParser, *, inclu
     workspace.add_argument("--default-sub-agent-ids", help=_json_array_help("default sub-agent IDs"))
     workspace.add_argument("--required-skills", help=_json_array_help("required skill definitions"))
     workspace.add_argument("--default-output-verifier", help="Default output verifier script or @file.")
+    workspace.add_argument("--default-sandbox-resource-tier", help="Default sandbox resource tier.")
     workspace.add_argument("--default-computer-pod-setting-id", help="Default computer pod setting ID.")
 
     resources = parser.add_argument_group("Mounted Resources")
@@ -122,7 +123,7 @@ def _add_agent_public_filter_arguments(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_agent_group(task_agent_sub: argparse._SubParsersAction) -> None:
     agent_parser = task_agent_sub.add_parser(
         "agent",
         help="Create, inspect, update, duplicate, and favorite reusable agents.",
@@ -266,7 +267,7 @@ def _register_agent_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     agent_create_optimized.set_defaults(handler=task_agent_cmd._cmd_task_agent_agent_create_optimized, command="task-agent agent create-optimized")
 
 
-def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_task_group(task_agent_sub: argparse._SubParsersAction) -> None:
     task_parser = task_agent_sub.add_parser(
         "task",
         help="Create, inspect, control, and share agent tasks.",
@@ -291,6 +292,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
     )
     add_paging_arguments(task_list)
     task_list.add_argument("--status", action="append", help="Task status filter. Repeat to pass multiple values.")
+    task_list.add_argument("--project-id", help="Filter by explicit Project ID.")
     task_list.add_argument("--agent-id", help="Filter tasks by agent ID.")
     add_search_argument(task_list)
     task_list.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_list, command="task-agent task list")
@@ -337,6 +339,8 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
             ],
         ),
     )
+    task_create.add_argument("--project-id", help="Create the task in this Project.")
+    task_create.add_argument("--reasoning-effort", help="Task reasoning effort override.")
     task_create.add_argument("--text", required=True, help="Task instruction text or @file.")
     task_create.add_argument("--agent-id", help="Saved agent ID to start.")
     task_create.add_argument("--title", help="Optional task title.")
@@ -522,7 +526,7 @@ def _register_task_group(task_agent_sub: argparse._SubParsersAction[argparse.Arg
     task_close_computer.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_close_computer_environment, command="task-agent task close-computer-environment")
 
 
-def _register_cycle_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_cycle_group(task_agent_sub: argparse._SubParsersAction) -> None:
     cycle_parser = task_agent_sub.add_parser(
         "cycle",
         help="Inspect cycles, replay reasoning, and run cycle workflows.",
@@ -544,6 +548,7 @@ def _register_cycle_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     )
     cycle_list.add_argument("--task-id", required=True, help="Task ID.")
     cycle_list.add_argument("--offset", type=int, default=0, help="Cycle index offset (default: 0).")
+    cycle_list.add_argument("--page-size", type=int, help="Maximum cycles per response; use next_start_index with --offset for the next page.")
     cycle_list.set_defaults(handler=task_agent_cmd._cmd_task_agent_cycle_list, command="task-agent cycle list")
 
     cycle_get = cycle_sub.add_parser(
@@ -610,7 +615,7 @@ def _register_cycle_group(task_agent_sub: argparse._SubParsersAction[argparse.Ar
     cycle_replay_summary.set_defaults(handler=task_agent_cmd._cmd_task_agent_cycle_replay_summary, command="task-agent cycle replay-summary")
 
 
-def _register_tag_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_tag_group(task_agent_sub: argparse._SubParsersAction) -> None:
     tag_parser = task_agent_sub.add_parser(
         "tag",
         help="Create, search, and maintain agent tags.",
@@ -662,7 +667,7 @@ def _register_tag_group(task_agent_sub: argparse._SubParsersAction[argparse.Argu
     tag_search.set_defaults(handler=task_agent_cmd._cmd_task_agent_tag_search, command="task-agent tag search")
 
 
-def _register_collection_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_collection_group(task_agent_sub: argparse._SubParsersAction) -> None:
     collection_parser = task_agent_sub.add_parser(
         "collection",
         help="Organize agents into reusable collections.",
@@ -746,7 +751,7 @@ def _register_collection_group(task_agent_sub: argparse._SubParsersAction[argpar
     collection_remove_agent.set_defaults(handler=task_agent_cmd._cmd_task_agent_collection_remove_agent, command="task-agent collection remove-agent")
 
 
-def _register_mcp_server_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_mcp_server_group(task_agent_sub: argparse._SubParsersAction) -> None:
     mcp_server_parser = task_agent_sub.add_parser(
         "mcp-server",
         help="Register, inspect, and test MCP servers.",
@@ -824,7 +829,7 @@ def _register_mcp_server_group(task_agent_sub: argparse._SubParsersAction[argpar
     mcp_test_existing.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_server_test_existing, command="task-agent mcp-server test-existing-server")
 
 
-def _register_mcp_tool_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_mcp_tool_group(task_agent_sub: argparse._SubParsersAction) -> None:
     mcp_tool_parser = task_agent_sub.add_parser(
         "mcp-tool",
         help="List, create, and inspect MCP tools.",
@@ -842,41 +847,11 @@ def _register_mcp_tool_group(task_agent_sub: argparse._SubParsersAction[argparse
     add_json_data_argument(mcp_tool_list)
     mcp_tool_list.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_list, command="task-agent mcp-tool list")
 
-    def _add_mcp_tool_payload_args(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--tool-name", help="Tool name.")
-        parser.add_argument("--description", help="Tool description or @file.")
-        parser.add_argument("--server-id", help="MCP server ID.")
-        parser.add_argument("--tool-schema", help=_json_object_help("tool schema"))
-        add_json_data_argument(parser)
-
-    mcp_tool_create = mcp_tool_sub.add_parser(
-        "create",
-        help="Create an MCP tool.",
-        **rich_parser_kwargs("Create an MCP tool registration.", examples=["vectorvein task-agent mcp-tool create --tool-name docs-search --server-id server_xxx"]),
-    )
-    _add_mcp_tool_payload_args(mcp_tool_create)
-    mcp_tool_create.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_create, command="task-agent mcp-tool create")
-
     mcp_tool_get = mcp_tool_sub.add_parser(
         "get", help="Get an MCP tool.", **rich_parser_kwargs("Fetch one MCP tool by ID.", examples=["vectorvein task-agent mcp-tool get --tool-id tool_xxx"])
     )
     mcp_tool_get.add_argument("--tool-id", required=True, help="Tool ID.")
     mcp_tool_get.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_get, command="task-agent mcp-tool get")
-
-    mcp_tool_update = mcp_tool_sub.add_parser(
-        "update",
-        help="Update an MCP tool.",
-        **rich_parser_kwargs("Update an MCP tool registration.", examples=["vectorvein task-agent mcp-tool update --tool-id tool_xxx --tool-name updated"]),
-    )
-    mcp_tool_update.add_argument("--tool-id", required=True, help="Tool ID.")
-    _add_mcp_tool_payload_args(mcp_tool_update)
-    mcp_tool_update.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_update, command="task-agent mcp-tool update")
-
-    mcp_tool_delete = mcp_tool_sub.add_parser(
-        "delete", help="Delete an MCP tool.", **rich_parser_kwargs("Delete an MCP tool registration.", examples=["vectorvein task-agent mcp-tool delete --tool-id tool_xxx"])
-    )
-    mcp_tool_delete.add_argument("--tool-id", required=True, help="Tool ID.")
-    mcp_tool_delete.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_delete, command="task-agent mcp-tool delete")
 
     mcp_tool_logs = mcp_tool_sub.add_parser(
         "logs",
@@ -888,7 +863,7 @@ def _register_mcp_tool_group(task_agent_sub: argparse._SubParsersAction[argparse
     mcp_tool_logs.set_defaults(handler=task_agent_cmd._cmd_task_agent_mcp_tool_logs, command="task-agent mcp-tool logs")
 
 
-def _register_user_memory_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_user_memory_group(task_agent_sub: argparse._SubParsersAction) -> None:
     memory_parser = task_agent_sub.add_parser(
         "user-memory",
         help="Create, list, and maintain user memory records.",
@@ -982,7 +957,7 @@ def _register_user_memory_group(task_agent_sub: argparse._SubParsersAction[argpa
     memory_types.set_defaults(handler=task_agent_cmd._cmd_task_agent_user_memory_types, command="task-agent user-memory types")
 
 
-def _register_skill_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_skill_group(task_agent_sub: argparse._SubParsersAction) -> None:
     skill_parser = task_agent_sub.add_parser(
         "skill",
         help="Browse, create, install, and maintain skills.",
@@ -1141,7 +1116,7 @@ def _add_eval_dataset_payload_arguments(parser: argparse.ArgumentParser, *, incl
     add_json_data_argument(parser)
 
 
-def _register_eval_dataset_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_eval_dataset_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "eval-dataset",
         help="Manage agent evaluation datasets.",
@@ -1220,7 +1195,7 @@ def _add_eval_case_payload_arguments(parser: argparse.ArgumentParser, *, include
     add_json_data_argument(parser)
 
 
-def _register_eval_case_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_eval_case_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "eval-case",
         help="Manage agent evaluation cases.",
@@ -1270,7 +1245,7 @@ def _register_eval_case_group(task_agent_sub: argparse._SubParsersAction[argpars
     delete_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_case_delete, command="task-agent eval-case delete")
 
 
-def _register_eval_run_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_eval_run_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "eval-run",
         help="Create and inspect agent evaluation runs.",
@@ -1347,7 +1322,7 @@ def _register_eval_run_group(task_agent_sub: argparse._SubParsersAction[argparse
     case_results_cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_eval_run_case_results, command="task-agent eval-run case-results")
 
 
-def _register_skill_review_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_skill_review_group(task_agent_sub: argparse._SubParsersAction) -> None:
     review_parser = task_agent_sub.add_parser(
         "skill-review",
         help="Create and inspect skill reviews.",
@@ -1382,7 +1357,7 @@ def _register_skill_review_group(task_agent_sub: argparse._SubParsersAction[argp
     review_delete.set_defaults(handler=task_agent_cmd._cmd_task_agent_skill_review_delete, command="task-agent skill-review delete")
 
 
-def _register_task_category_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_task_category_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "task-category",
         help="List task categories.",
@@ -1394,7 +1369,7 @@ def _register_task_category_group(task_agent_sub: argparse._SubParsersAction[arg
     cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_category_list, command="task-agent task-category list")
 
 
-def _register_tool_category_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_tool_category_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "tool-category",
         help="List workflow tool categories.",
@@ -1406,7 +1381,7 @@ def _register_tool_category_group(task_agent_sub: argparse._SubParsersAction[arg
     cmd.set_defaults(handler=task_agent_cmd._cmd_task_agent_tool_category_list, command="task-agent tool-category list")
 
 
-def _register_workflow_tool_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_workflow_tool_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "workflow-tool",
         help="Publish workflows as reusable tools.",
@@ -1492,7 +1467,7 @@ def _register_workflow_tool_group(task_agent_sub: argparse._SubParsersAction[arg
     workflow_tool_batch_create.set_defaults(handler=task_agent_cmd._cmd_task_agent_workflow_tool_batch_create, command="task-agent workflow-tool batch-create")
 
 
-def _register_task_schedule_group(task_agent_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def _register_task_schedule_group(task_agent_sub: argparse._SubParsersAction) -> None:
     parser = task_agent_sub.add_parser(
         "task-schedule",
         help="Manage recurring agent task schedules.",
@@ -1560,7 +1535,7 @@ def _register_task_schedule_group(task_agent_sub: argparse._SubParsersAction[arg
     schedule_toggle.set_defaults(handler=task_agent_cmd._cmd_task_agent_task_schedule_toggle, command="task-agent task-schedule toggle")
 
 
-def register_task_agent_parser(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_task_agent_parser(top_level: argparse._SubParsersAction) -> None:
     task_agent_parser = top_level.add_parser(
         "task-agent",
         help="Task-agent related commands.",

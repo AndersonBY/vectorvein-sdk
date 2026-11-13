@@ -55,10 +55,6 @@ _STUB_RESPONSE_BY_ENDPOINT = {
         "status": 200,
         "data": {"oss_path": "oss://z.zip", "download_url": "https://example.com/z.zip", "file_count": 3, "workspace_id": "ws_1"},
     },
-    "agent-workspace/sync-container-to-oss": {
-        "status": 200,
-        "data": {"message": "同步任务已触发", "workspace_id": "ws_1", "task_id": "task_1"},
-    },
 }
 
 
@@ -95,7 +91,6 @@ def test_sync_endpoint_mapping_for_phase1_methods():
     client.write_workspace_file("ws_1", "a.txt", "hello")
     client.delete_workspace_file("ws_1", "a.txt")
     client.zip_workspace_files("ws_1")
-    client.sync_workspace_container_to_oss("ws_1")
 
     assert client.calls == [
         ("GET", "user/validate-api-key"),
@@ -108,7 +103,6 @@ def test_sync_endpoint_mapping_for_phase1_methods():
         ("POST", "agent-workspace/write-file"),
         ("POST", "agent-workspace/delete-file"),
         ("POST", "agent-workspace/zip-files"),
-        ("POST", "agent-workspace/sync-container-to-oss"),
     ]
 
 
@@ -128,7 +122,6 @@ def test_async_endpoint_mapping_for_phase1_methods():
         await client.write_workspace_file("ws_1", "a.txt", "hello")
         await client.delete_workspace_file("ws_1", "a.txt")
         await client.zip_workspace_files("ws_1")
-        await client.sync_workspace_container_to_oss("ws_1")
 
         assert client.calls == [
             ("GET", "user/validate-api-key"),
@@ -141,7 +134,6 @@ def test_async_endpoint_mapping_for_phase1_methods():
             ("POST", "agent-workspace/write-file"),
             ("POST", "agent-workspace/delete-file"),
             ("POST", "agent-workspace/zip-files"),
-            ("POST", "agent-workspace/sync-container-to-oss"),
         ]
 
     asyncio.run(_run())

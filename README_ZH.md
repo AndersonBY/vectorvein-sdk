@@ -180,7 +180,6 @@ vectorvein agent-workspace write --workspace-id ws_xxx --file-path output.txt --
 vectorvein agent-workspace delete --workspace-id ws_xxx --file-path old.txt
 vectorvein agent-workspace download --workspace-id ws_xxx --file-path result.csv
 vectorvein agent-workspace zip --workspace-id ws_xxx
-vectorvein agent-workspace sync --workspace-id ws_xxx
 
 # 高级用法：调用暂未封装成高级命令的 API
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
@@ -392,8 +391,12 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     # 列出执行周期（推理步骤）
     cycles = client.list_agent_cycles(task_id=task.task_id)
     for cycle in cycles.cycles:
-        print(f"周期 {cycle.cycle_index}: {cycle.title}")
+        print(f"周期 {cycle.cycle_index}: {cycle.cycle_id} ({cycle.status})")
 ```
+
+周期列表已分页。可传入 `page_size`；当 `has_more` 为真时，将 `next_start_index`
+作为下一页的 `cycle_index_offset`。`total` 可能大于当前页的 `returned_count`，
+周期标识字段为 `cycle_id`。
 
 ### 智能体 Schema 说明
 
@@ -496,9 +499,12 @@ url = client.download_workspace_file(workspace_id="ws_id", file_path="result.csv
 zip_info = client.zip_workspace_files(workspace_id="ws_id")
 print(zip_info["download_url"])
 
-# 触发容器到 OSS 的异步同步（Computer Agent 工作空间）
-client.sync_workspace_container_to_oss(workspace_id="ws_id")
 ```
+
+旧 `workspace_id` API 对 Project 工作区只提供读取。Project HEAD 和 Task Worktree
+操作请使用 `vectorvein api request`，分别调用 `agent-workspace/project-head/*`
+和 `agent-workspace/worktree/*`。后端已移除容器到 OSS 的同步接口，SDK 与 CLI
+也已移除对应入口。
 
 ## 用户接口
 

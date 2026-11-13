@@ -31,6 +31,9 @@ jobs:
       - name: Format check
         run: pdm run format-check
 
+      - name: Type check
+        run: pdm run type-check
+
       - name: Unit tests
         run: pdm run pytest tests/unit/ -v
 

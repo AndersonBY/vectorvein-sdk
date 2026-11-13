@@ -103,7 +103,7 @@ class Port:
     @value.setter
     def value(self, value: Any) -> None:
         if self.options:
-            if value not in (x["value"] for x in self.options):
+            if value not in (x["value"] if isinstance(x, dict) else x for x in self.options):
                 raise ValueError(f"Value `{value}` is not in Port `{self.name}` options {self.options}")
         self._value = value
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from textwrap import dedent
+from typing import TypedDict
 
 from vectorvein.cli._parsers import _parse_bool_text
 
@@ -39,13 +40,19 @@ def _section(title: str, lines: list[str]) -> str:
     return f"{title}:\n" + "\n".join(f"  {line}" for line in lines)
 
 
+class _RichParserKwargs(TypedDict):
+    description: str
+    epilog: str | None
+    formatter_class: type[argparse.HelpFormatter]
+
+
 def rich_parser_kwargs(
     description: str,
     *,
     examples: list[str] | None = None,
     notes: list[str] | None = None,
     fixes: list[str] | None = None,
-) -> dict[str, object]:
+) -> _RichParserKwargs:
     sections = [section for section in [_section("Examples", examples or []), _section("JSON and @file Inputs", notes or []), _section("Common Fixes", fixes or [])] if section]
     return {
         "description": dedent(description).strip(),
@@ -68,7 +75,7 @@ def add_json_data_argument(parser: argparse.ArgumentParser, *, help_text: str = 
 
 
 def add_bool_text_argument(
-    parser: argparse.ArgumentParser,
+    parser: argparse.ArgumentParser | argparse._ArgumentGroup,
     option: str,
     *,
     help_text: str,
@@ -76,4 +83,4 @@ def add_bool_text_argument(
     display_default: bool | str = "not set",
 ) -> None:
     action = parser.add_argument(option, dest=dest, type=_parse_bool_text, metavar="BOOL", help=f"{help_text} Accepted values: true or false.")
-    action.display_default = _format_default_value(display_default)
+    action.__dict__["display_default"] = _format_default_value(display_default)

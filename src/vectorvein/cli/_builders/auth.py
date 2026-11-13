@@ -8,7 +8,7 @@ from vectorvein.cli._builders.common import rich_parser_kwargs
 from vectorvein.cli._commands.auth import _cmd_auth_whoami, _cmd_user_info, _cmd_user_validate_api_key
 
 
-def register_auth_parsers(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_auth_parsers(top_level: argparse._SubParsersAction) -> None:
     auth_parser = top_level.add_parser(
         "auth",
         help="Authentication related commands.",

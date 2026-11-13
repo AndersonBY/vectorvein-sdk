@@ -201,6 +201,11 @@ def _collect_uploaded_workflow_input_fields(args: argparse.Namespace, client: Ve
         node_id, field_name, local_path = _parse_upload_to_spec(spec, f"--upload-to[{index}]")
         grouped_paths.setdefault((node_id, field_name), []).append(local_path)
 
+    if args.upload_as == "single":
+        for (node_id, field_name), paths in grouped_paths.items():
+            if len(paths) != 1:
+                raise CLIUsageError(f"Field {node_id}:{field_name} received {len(paths)} files, but --upload-as single requires exactly one file.")
+
     uploaded_input_fields: list[WorkflowInputField] = []
     for (node_id, field_name), paths in grouped_paths.items():
         uploaded_paths: list[str] = []
@@ -210,8 +215,6 @@ def _collect_uploaded_workflow_input_fields(args: argparse.Namespace, client: Ve
 
         upload_as = str(args.upload_as)
         if upload_as == "single":
-            if len(uploaded_paths) != 1:
-                raise CLIUsageError(f"Field {node_id}:{field_name} received {len(uploaded_paths)} files, but --upload-as single requires exactly one file.")
             value: Any = uploaded_paths[0]
         elif upload_as == "list":
             value = uploaded_paths

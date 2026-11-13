@@ -8,7 +8,7 @@ from vectorvein.cli._builders.common import rich_parser_kwargs
 from vectorvein.cli._commands.file import _cmd_file_upload
 
 
-def register_file_parser(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_file_parser(top_level: argparse._SubParsersAction) -> None:
     file_parser = top_level.add_parser(
         "file",
         help="File upload commands.",

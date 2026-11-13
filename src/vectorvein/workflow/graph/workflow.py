@@ -222,13 +222,17 @@ class Workflow:
                 task_name=task_name,
                 description=node_data["data"].get("description", node_instance.description if hasattr(node_instance, "description") else ""),
                 node_id=node_data["id"],
+                ports=node_instance.ports,
                 position=node_data.get("position", {"x": 0, "y": 0}),
                 seleted_workflow_title=node_data["data"].get("seleted_workflow_title", ""),
                 is_template=node_data["data"].get("is_template", False),
                 initialized=node_data.get("initialized", False),
-                can_add_input_ports=node_data["data"].get("has_inputs", False),
-                can_add_output_ports=node_data["data"].get("has_outputs", False),
+                can_add_input_ports=node_instance.can_add_input_ports,
+                can_add_output_ports=node_instance.can_add_output_ports,
             )
+
+            for attribute in ("ignored", "lock", "shadow"):
+                setattr(node, attribute, node_data.get(attribute, False))
 
             # 处理端口
             for port_name, port_data in node_data["data"].get("template", {}).items():
@@ -244,10 +248,10 @@ class Workflow:
                         port.required = port_data["required"]
                     if "show" in port_data:
                         port.show = port_data["show"]
-                    if "value" in port_data:
-                        port.value = port_data["value"]
                     if "options" in port_data:
                         port.options = port_data["options"]
+                    if "value" in port_data and port_data["value"] != port.value:
+                        port.value = port_data["value"]
                     if "type" in port_data:
                         port.field_type = port_data["type"]
                     if "max_length" in port_data:
@@ -318,8 +322,7 @@ class Workflow:
                             list=port_data.get("list", False),
                         )
 
-                    # 添加新端口到节点
-                    node.ports[port_name] = port
+                node.ports[port_name] = port
 
             workflow.add_node(node)
 

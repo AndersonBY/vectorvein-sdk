@@ -1,6 +1,6 @@
 """Task Agent API functionality"""
 
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from typing import Any, BinaryIO
 
 from .models import (
@@ -22,7 +22,7 @@ from .models import (
 def _to_dict(obj):
     """Convert dataclass to dict, handling nested dataclasses"""
     if hasattr(obj, "__dataclass_fields__"):
-        return asdict(obj)
+        return {key: value for key, value in asdict(obj).items() if value is not None}
     return obj
 
 
@@ -86,6 +86,12 @@ def _create_agent_from_response(data: dict) -> Agent:
         available_workflow_templates=data.get("available_workflow_templates"),
         available_mcp_tools=data.get("available_mcp_tools"),
         is_favorited=data.get("is_favorited"),
+        tools_count=data.get("tools_count"),
+        default_sandbox_resource_tier=data.get("default_sandbox_resource_tier"),
+        available_workflow_ids=data.get("available_workflow_ids"),
+        available_template_ids=data.get("available_template_ids"),
+        available_mcp_tool_ids=data.get("available_mcp_tool_ids"),
+        tag_ids=data.get("tag_ids"),
     )
 
 
@@ -117,35 +123,11 @@ def _create_agent_task_from_response(data: dict) -> AgentTask:
     waiting_question = None
     if data.get("waiting_question"):
         wq_data = data["waiting_question"]
-        waiting_question = WaitingQuestion(cycle_id=wq_data["cycle_id"], tool_call_id=wq_data["tool_call_id"], question=wq_data["question"])
+        waiting_question = WaitingQuestion(**wq_data)
 
-    return AgentTask(
-        task_id=data["task_id"],
-        user=user,
-        source_agent_id=data.get("source_agent_id"),
-        source_agent_name=data.get("source_agent_name"),
-        source_agent_avatar=data.get("source_agent_avatar"),
-        title=data.get("title"),
-        task_info=data.get("task_info"),
-        agent_definition=data.get("agent_definition"),
-        status=data.get("status"),
-        max_cycles=data.get("max_cycles"),
-        workspace_id=data.get("workspace_id"),
-        current_cycle_index=data.get("current_cycle_index"),
-        result=data.get("result"),
-        total_prompt_tokens=data.get("total_prompt_tokens"),
-        total_completion_tokens=data.get("total_completion_tokens"),
-        used_credits=data.get("used_credits"),
-        error_reason_title=data.get("error_reason_title"),
-        shared=data.get("shared"),
-        is_public=data.get("is_public"),
-        shared_meta=data.get("shared_meta"),
-        create_time=data.get("create_time"),
-        update_time=data.get("update_time"),
-        complete_time=data.get("complete_time"),
-        waiting_question=waiting_question,
-        cycles=data.get("cycles"),
-    )
+    task_fields: dict[str, Any] = {item.name: data[item.name] for item in fields(AgentTask) if item.name in data}
+    task_fields.update(user=user, waiting_question=waiting_question)
+    return AgentTask(**task_fields)
 
 
 def _create_agent_task_list_response(data: dict) -> AgentTaskListResponse:
@@ -158,6 +140,12 @@ def _create_agent_task_list_response(data: dict) -> AgentTaskListResponse:
         page_size=data["page_size"],
         page_count=data["page_count"],
     )
+
+
+def _create_agent_cycle_list_response(data: dict[str, Any]) -> AgentCycleListResponse:
+    payload: dict[str, Any] = dict(data)
+    payload["cycles"] = [AgentCycle(**item) for item in data["cycles"]]
+    return AgentCycleListResponse(**payload)
 
 
 class TaskAgentSyncMixin:
@@ -192,6 +180,7 @@ class TaskAgentSyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
+        default_sandbox_resource_tier: str | None = None,
     ) -> Agent:
         """Create agent configuration
 
@@ -254,6 +243,7 @@ class TaskAgentSyncMixin:
         _set_if_not_none(payload, "required_skills", required_skills)
         _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
         _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_sandbox_resource_tier", default_sandbox_resource_tier)
         _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
         _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
         _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
@@ -344,6 +334,7 @@ class TaskAgentSyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
+        default_sandbox_resource_tier: str | None = None,
     ) -> Agent:
         """Update agent configuration
 
@@ -404,6 +395,7 @@ class TaskAgentSyncMixin:
         _set_if_not_none(payload, "required_skills", required_skills)
         _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
         _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_sandbox_resource_tier", default_sandbox_resource_tier)
         _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
         _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
         _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
@@ -504,6 +496,14 @@ class TaskAgentSyncMixin:
         agent_settings: AgentSettings | None = None,
         max_cycles: int | None = None,
         title: str | None = None,
+        *,
+        project_id: str | None = None,
+        load_user_memory: bool | None = None,
+        send_email: bool | None = None,
+        mounted_cloud_storage_paths: list[str] | None = None,
+        mounted_folder_ids: list[str] | None = None,
+        cloud_storage_write_enabled: bool | None = None,
+        is_hidden: bool | None = None,
     ) -> AgentTask:
         """Create agent task
 
@@ -521,7 +521,16 @@ class TaskAgentSyncMixin:
         Raises:
             VectorVeinAPIError: Task creation error
         """
-        payload = {"task_info": _to_dict(task_info)}
+        payload = _build_payload(
+            {"task_info": _to_dict(task_info)},
+            project_id=project_id,
+            load_user_memory=load_user_memory,
+            send_email=send_email,
+            mounted_cloud_storage_paths=mounted_cloud_storage_paths,
+            mounted_folder_ids=mounted_folder_ids,
+            cloud_storage_write_enabled=cloud_storage_write_enabled,
+            is_hidden=is_hidden,
+        )
 
         if agent_id_to_start:
             payload["agent_id_to_start"] = agent_id_to_start
@@ -560,6 +569,8 @@ class TaskAgentSyncMixin:
         status: str | list[str] | None = None,
         agent_id: str | None = None,
         search: str | None = None,
+        *,
+        project_id: str | None = None,
     ) -> AgentTaskListResponse:
         """List agent tasks
 
@@ -576,7 +587,7 @@ class TaskAgentSyncMixin:
         Raises:
             VectorVeinAPIError: List error
         """
-        payload = {"page": page, "page_size": page_size}
+        payload = _build_payload({"page": page, "page_size": page_size}, project_id=project_id)
         if status is not None:
             payload["status"] = status
         if agent_id:
@@ -830,6 +841,8 @@ class TaskAgentSyncMixin:
         self,
         task_id: str,
         cycle_index_offset: int = 0,
+        *,
+        page_size: int | None = None,
     ) -> AgentCycleListResponse:
         """List agent task cycles
 
@@ -844,8 +857,9 @@ class TaskAgentSyncMixin:
             VectorVeinAPIError: List error
         """
         payload = {"task_id": task_id, "cycle_index_offset": cycle_index_offset}
+        _set_if_not_none(payload, "page_size", page_size)
         response = self._request("POST", "task-agent/agent-cycle/list", json=payload)
-        return AgentCycleListResponse(**response["data"])
+        return _create_agent_cycle_list_response(response["data"])
 
     def get_agent_cycle(self, cycle_id: str) -> AgentCycle:
         """Get agent cycle details
@@ -1013,21 +1027,8 @@ class TaskAgentSyncMixin:
         response = self._request("POST", "task-agent/mcp-tool/list", json=payload)
         return response["data"]
 
-    def create_mcp_tool(self, **payload: Any) -> dict[str, Any]:
-        response = self._request("POST", "task-agent/mcp-tool/create", json=payload)
-        return response["data"]
-
     def get_mcp_tool(self, tool_id: str) -> dict[str, Any]:
         response = self._request("POST", "task-agent/mcp-tool/get", json={"tool_id": tool_id})
-        return response["data"]
-
-    def update_mcp_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
-        request_data = {"tool_id": tool_id, **payload}
-        response = self._request("POST", "task-agent/mcp-tool/update", json=request_data)
-        return response["data"]
-
-    def delete_mcp_tool(self, tool_id: str) -> dict[str, Any]:
-        response = self._request("POST", "task-agent/mcp-tool/delete", json={"tool_id": tool_id})
         return response["data"]
 
     def get_mcp_tool_logs(self, tool_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:
@@ -1547,6 +1548,7 @@ class TaskAgentAsyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool = False,
         is_public: bool = False,
+        default_sandbox_resource_tier: str | None = None,
     ) -> Agent:
         """Async create agent configuration"""
         payload = {
@@ -1573,6 +1575,7 @@ class TaskAgentAsyncMixin:
         _set_if_not_none(payload, "required_skills", required_skills)
         _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
         _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_sandbox_resource_tier", default_sandbox_resource_tier)
         _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
         _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
         _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
@@ -1639,6 +1642,7 @@ class TaskAgentAsyncMixin:
         tag_ids: list[str] | None = None,
         shared: bool | None = None,
         is_public: bool | None = None,
+        default_sandbox_resource_tier: str | None = None,
     ) -> Agent:
         """Async update agent configuration"""
         payload = {"agent_id": agent_id}
@@ -1662,6 +1666,7 @@ class TaskAgentAsyncMixin:
         _set_if_not_none(payload, "required_skills", required_skills)
         _set_if_not_none(payload, "default_output_verifier", default_output_verifier)
         _set_if_not_none(payload, "default_computer_pod_setting_id", default_computer_pod_setting_id)
+        _set_if_not_none(payload, "default_sandbox_resource_tier", default_sandbox_resource_tier)
         _set_if_not_none(payload, "default_cloud_storage_paths", default_cloud_storage_paths)
         _set_if_not_none(payload, "default_cloud_storage_write_enabled", default_cloud_storage_write_enabled)
         _set_if_not_none(payload, "available_workflow_ids", available_workflow_ids)
@@ -1744,9 +1749,26 @@ class TaskAgentAsyncMixin:
         agent_settings: AgentSettings | None = None,
         max_cycles: int | None = None,
         title: str | None = None,
+        *,
+        project_id: str | None = None,
+        load_user_memory: bool | None = None,
+        send_email: bool | None = None,
+        mounted_cloud_storage_paths: list[str] | None = None,
+        mounted_folder_ids: list[str] | None = None,
+        cloud_storage_write_enabled: bool | None = None,
+        is_hidden: bool | None = None,
     ) -> AgentTask:
         """Async create agent task"""
-        payload = {"task_info": _to_dict(task_info)}
+        payload = _build_payload(
+            {"task_info": _to_dict(task_info)},
+            project_id=project_id,
+            load_user_memory=load_user_memory,
+            send_email=send_email,
+            mounted_cloud_storage_paths=mounted_cloud_storage_paths,
+            mounted_folder_ids=mounted_folder_ids,
+            cloud_storage_write_enabled=cloud_storage_write_enabled,
+            is_hidden=is_hidden,
+        )
 
         if agent_id_to_start:
             payload["agent_id_to_start"] = agent_id_to_start
@@ -1775,9 +1797,11 @@ class TaskAgentAsyncMixin:
         status: str | list[str] | None = None,
         agent_id: str | None = None,
         search: str | None = None,
+        *,
+        project_id: str | None = None,
     ) -> AgentTaskListResponse:
         """Async list agent tasks"""
-        payload = {"page": page, "page_size": page_size}
+        payload = _build_payload({"page": page, "page_size": page_size}, project_id=project_id)
         if status is not None:
             payload["status"] = status
         if agent_id:
@@ -1941,11 +1965,14 @@ class TaskAgentAsyncMixin:
         self,
         task_id: str,
         cycle_index_offset: int = 0,
+        *,
+        page_size: int | None = None,
     ) -> AgentCycleListResponse:
         """Async list agent task cycles"""
         payload = {"task_id": task_id, "cycle_index_offset": cycle_index_offset}
+        _set_if_not_none(payload, "page_size", page_size)
         response = await self._request("POST", "task-agent/agent-cycle/list", json=payload)
-        return AgentCycleListResponse(**response["data"])
+        return _create_agent_cycle_list_response(response["data"])
 
     async def get_agent_cycle(self, cycle_id: str) -> AgentCycle:
         """Async get agent cycle details"""
@@ -2108,21 +2135,8 @@ class TaskAgentAsyncMixin:
         response = await self._request("POST", "task-agent/mcp-tool/list", json=payload)
         return response["data"]
 
-    async def create_mcp_tool(self, **payload: Any) -> dict[str, Any]:
-        response = await self._request("POST", "task-agent/mcp-tool/create", json=payload)
-        return response["data"]
-
     async def get_mcp_tool(self, tool_id: str) -> dict[str, Any]:
         response = await self._request("POST", "task-agent/mcp-tool/get", json={"tool_id": tool_id})
-        return response["data"]
-
-    async def update_mcp_tool(self, tool_id: str, **payload: Any) -> dict[str, Any]:
-        request_data = {"tool_id": tool_id, **payload}
-        response = await self._request("POST", "task-agent/mcp-tool/update", json=request_data)
-        return response["data"]
-
-    async def delete_mcp_tool(self, tool_id: str) -> dict[str, Any]:
-        response = await self._request("POST", "task-agent/mcp-tool/delete", json={"tool_id": tool_id})
         return response["data"]
 
     async def get_mcp_tool_logs(self, tool_id: str, page: int = 1, page_size: int = 20) -> dict[str, Any]:

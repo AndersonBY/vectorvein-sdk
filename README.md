@@ -180,7 +180,6 @@ vectorvein agent-workspace write --workspace-id ws_xxx --file-path output.txt --
 vectorvein agent-workspace delete --workspace-id ws_xxx --file-path old.txt
 vectorvein agent-workspace download --workspace-id ws_xxx --file-path result.csv
 vectorvein agent-workspace zip --workspace-id ws_xxx
-vectorvein agent-workspace sync --workspace-id ws_xxx
 
 # Raw request for advanced / not-yet-wrapped operations
 vectorvein api request --method POST --endpoint workflow/list --body '{"page":1,"page_size":5}'
@@ -392,8 +391,12 @@ with VectorVeinClient(api_key="YOUR_API_KEY") as client:
     # List cycles (reasoning steps)
     cycles = client.list_agent_cycles(task_id=task.task_id)
     for cycle in cycles.cycles:
-        print(f"Cycle {cycle.cycle_index}: {cycle.title}")
+        print(f"Cycle {cycle.cycle_index}: {cycle.cycle_id} ({cycle.status})")
 ```
+
+Cycle lists are paginated. Pass `page_size` and use `next_start_index` as the next
+`cycle_index_offset` while `has_more` is true. `total` can exceed the current page's
+`returned_count`. The cycle identifier is `cycle_id`.
 
 ### Agent Schema Notes
 
@@ -496,9 +499,12 @@ url = client.download_workspace_file(workspace_id="ws_id", file_path="result.csv
 zip_info = client.zip_workspace_files(workspace_id="ws_id")
 print(zip_info["download_url"])
 
-# Trigger async container-to-OSS sync (Computer Agent workspace)
-client.sync_workspace_container_to_oss(workspace_id="ws_id")
 ```
+
+Project workspaces are read-only through the legacy `workspace_id` API. Use the
+explicit `agent-workspace/project-head/*` or `agent-workspace/worktree/*` endpoints
+with `vectorvein api request` for their corresponding contexts. The removed
+container-to-OSS sync endpoint is no longer exposed by the SDK or CLI.
 
 ## User APIs
 

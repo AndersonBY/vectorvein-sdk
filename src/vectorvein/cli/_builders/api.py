@@ -8,7 +8,7 @@ from vectorvein.cli._builders.common import rich_parser_kwargs
 from vectorvein.cli._commands.api import _cmd_api_request
 
 
-def register_api_parser(top_level: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+def register_api_parser(top_level: argparse._SubParsersAction) -> None:
     api_parser = top_level.add_parser(
         "api",
         help="Low-level API request command for unsupported operations.",

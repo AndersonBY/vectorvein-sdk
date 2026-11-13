@@ -22,11 +22,11 @@ def _create_agent_workspace_from_response(data: dict) -> AgentWorkspace:
     latest_files = []
     if data.get("latest_files"):
         for file_data in data["latest_files"]:
-            latest_files.append(WorkspaceFile(key=file_data["key"], size=file_data["size"], etag=file_data["etag"], last_modified=file_data["last_modified"]))
+            latest_files.append(WorkspaceFile(**file_data))
 
     return AgentWorkspace(
         workspace_id=data["workspace_id"],
-        agent_task_id=data["agent_task_id"],
+        agent_task_id=data.get("agent_task_id"),
         user=user,
         oss_bucket=data["oss_bucket"],
         base_storage_path=data["base_storage_path"],
@@ -34,6 +34,14 @@ def _create_agent_workspace_from_response(data: dict) -> AgentWorkspace:
         last_accessed=data["last_accessed"],
         latest_files=latest_files,
         file_count=data["file_count"],
+        scope=data.get("scope"),
+        revision=data.get("revision"),
+        project_id=data.get("project_id"),
+        task_count=data.get("task_count"),
+        current_size_bytes=data.get("current_size_bytes"),
+        max_size_bytes=data.get("max_size_bytes"),
+        can_write=data.get("can_write"),
+        write_blocked_reason=data.get("write_blocked_reason"),
     )
 
 
@@ -94,6 +102,11 @@ class AgentWorkspaceSyncMixin:
         workspace_id: str,
         prefix: str | None = None,
         tree_view: bool = False,
+        *,
+        page_size: int | None = None,
+        cursor: str | None = None,
+        recursive: bool | None = None,
+        task_id: str | None = None,
     ) -> WorkspaceFileListResponse:
         """List files in workspace
 
@@ -111,9 +124,15 @@ class AgentWorkspaceSyncMixin:
         payload = {"workspace_id": workspace_id, "tree_view": tree_view}
         if prefix:
             payload["prefix"] = prefix
+        for key, value in {"page_size": page_size, "cursor": cursor, "recursive": recursive, "task_id": task_id}.items():
+            if value is not None:
+                payload[key] = value
 
         response = self._request("POST", "agent-workspace/list-files", json=payload)
-        return WorkspaceFileListResponse(**response["data"])
+        data = dict(response["data"])
+        if isinstance(data["files"], list) and not data["tree_view"]:
+            data["files"] = [WorkspaceFile(**item) for item in data["files"]]
+        return WorkspaceFileListResponse(**data)
 
     def read_workspace_file(
         self,
@@ -143,7 +162,9 @@ class AgentWorkspaceSyncMixin:
             payload["end_line"] = end_line
 
         response = self._request("POST", "agent-workspace/read-file", json=payload)
-        return WorkspaceFileContent(**response["data"])
+        data = dict(response["data"])
+        data["file_info"] = WorkspaceFile(**data["file_info"])
+        return WorkspaceFileContent(**data)
 
     def download_workspace_file(self, workspace_id: str, file_path: str) -> str:
         """Get workspace file download URL
@@ -207,12 +228,6 @@ class AgentWorkspaceSyncMixin:
         response = self._request("POST", "agent-workspace/zip-files", json=payload)
         return response["data"]
 
-    def sync_workspace_container_to_oss(self, workspace_id: str) -> dict[str, Any]:
-        """Trigger async sync from workspace container to OSS."""
-        payload = {"workspace_id": workspace_id}
-        response = self._request("POST", "agent-workspace/sync-container-to-oss", json=payload)
-        return response["data"]
-
 
 class AgentWorkspaceAsyncMixin:
     """Asynchronous agent workspace API methods"""
@@ -259,6 +274,11 @@ class AgentWorkspaceAsyncMixin:
         workspace_id: str,
         prefix: str | None = None,
         tree_view: bool = False,
+        *,
+        page_size: int | None = None,
+        cursor: str | None = None,
+        recursive: bool | None = None,
+        task_id: str | None = None,
     ) -> WorkspaceFileListResponse:
         """Async list files in workspace
 
@@ -276,9 +296,15 @@ class AgentWorkspaceAsyncMixin:
         payload = {"workspace_id": workspace_id, "tree_view": tree_view}
         if prefix:
             payload["prefix"] = prefix
+        for key, value in {"page_size": page_size, "cursor": cursor, "recursive": recursive, "task_id": task_id}.items():
+            if value is not None:
+                payload[key] = value
 
         response = await self._request("POST", "agent-workspace/list-files", json=payload)
-        return WorkspaceFileListResponse(**response["data"])
+        data = dict(response["data"])
+        if isinstance(data["files"], list) and not data["tree_view"]:
+            data["files"] = [WorkspaceFile(**item) for item in data["files"]]
+        return WorkspaceFileListResponse(**data)
 
     async def read_workspace_file(
         self,
@@ -308,7 +334,9 @@ class AgentWorkspaceAsyncMixin:
             payload["end_line"] = end_line
 
         response = await self._request("POST", "agent-workspace/read-file", json=payload)
-        return WorkspaceFileContent(**response["data"])
+        data = dict(response["data"])
+        data["file_info"] = WorkspaceFile(**data["file_info"])
+        return WorkspaceFileContent(**data)
 
     async def download_workspace_file(self, workspace_id: str, file_path: str) -> str:
         """Async get workspace file download URL
@@ -370,10 +398,4 @@ class AgentWorkspaceAsyncMixin:
         """Async zip all workspace files and return download info."""
         payload = {"workspace_id": workspace_id}
         response = await self._request("POST", "agent-workspace/zip-files", json=payload)
-        return response["data"]
-
-    async def sync_workspace_container_to_oss(self, workspace_id: str) -> dict[str, Any]:
-        """Async trigger sync from workspace container to OSS."""
-        payload = {"workspace_id": workspace_id}
-        response = await self._request("POST", "agent-workspace/sync-container-to-oss", json=payload)
         return response["data"]

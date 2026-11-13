@@ -1,6 +1,6 @@
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -303,11 +303,7 @@ def test_cli_task_wait_returns_on_backend_wait_response(monkeypatch: pytest.Monk
     assert stderr == {}
     assert stdout["ok"] is True
     assert stdout["data"]["status"] == "WAIT_RESPONSE"
-    assert stdout["data"]["waiting_question"] == {
-        "cycle_id": "cycle_1",
-        "tool_call_id": "tool_call_1",
-        "question": "Proceed?",
-    }
+    assert stdout["data"]["waiting_question"] == asdict(WaitingQuestion(cycle_id="cycle_1", tool_call_id="tool_call_1", question="Proceed?"))
 
 
 def test_cli_task_agent_eval_dataset_list_merges_agent_friendly_filters(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):

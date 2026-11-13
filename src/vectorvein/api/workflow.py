@@ -43,12 +43,14 @@ class WorkflowMixin:
     @staticmethod
     def _parse_workflow_result(response: dict[str, Any], rid: str) -> WorkflowRunResult:
         """Parse workflow run result"""
-        if response["status"] in [200, 202]:
+        if response["status"] == 202:
+            return WorkflowRunResult(rid=rid, status=202, msg=response["msg"], data=[])
+        if response["status"] == 200:
             return WorkflowRunResult(
                 rid=rid,
                 status=response["status"],
                 msg=response["msg"],
-                data=[WorkflowOutput(**output) for output in response["data"]],
+                data=[WorkflowOutput(**output) for output in response["data"]] if isinstance(response["data"], list) else response["data"],
             )
         else:
             raise WorkflowError(f"Workflow execution failed: {response['msg']}")
@@ -134,10 +136,14 @@ class WorkflowSyncMixin(WorkflowMixin):
             return result["data"]["rid"]
 
         rid = result.get("rid") or (isinstance(result["data"], dict) and result["data"].get("rid")) or ""
-        start_time = time.time()
+        if result["status"] == 200 and ("rid" in result or isinstance(result["data"], list)):
+            return self._parse_workflow_result(result, rid)
+        if not rid:
+            raise WorkflowError("Workflow response did not include a run ID")
+        start_time = time.monotonic()
 
         while True:
-            if time.time() - start_time > timeout:
+            if time.monotonic() - start_time > timeout:
                 raise TimeoutError(f"Workflow execution timed out after {timeout} seconds")
 
             if api_key_type == "WORKFLOW":
@@ -675,10 +681,14 @@ class WorkflowAsyncMixin(WorkflowMixin):
             return result["data"]["rid"]
 
         rid = result.get("rid") or (isinstance(result["data"], dict) and result["data"].get("rid")) or ""
-        start_time = time.time()
+        if result["status"] == 200 and ("rid" in result or isinstance(result["data"], list)):
+            return self._parse_workflow_result(result, rid)
+        if not rid:
+            raise WorkflowError("Workflow response did not include a run ID")
+        start_time = time.monotonic()
 
         while True:
-            if time.time() - start_time > timeout:
+            if time.monotonic() - start_time > timeout:
                 raise TimeoutError(f"Workflow execution timed out after {timeout} seconds")
 
             if api_key_type == "WORKFLOW":
